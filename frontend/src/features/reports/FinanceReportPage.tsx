@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import ErrorAlert from '../../components/global/ErrorAlert'
 import { drfErrorToMessage } from '../../utils/drfErrorToMessage'
-import { fetchFinanceReport } from '../../api/reportsApi'
+import { fetchFinanceReport, type FinanceDayRow, type FinanceReport } from '../../api/reportsApi'
 import { formatDateYMD } from '../../utils/date'
 
 import {
@@ -17,54 +17,109 @@ import {
   Bar,
 } from 'recharts'
 
-function toNum(v: string) {
-  const n = Number(v)
+function money(n: number): string {
+  return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+function parseNum(s: any): number {
+  const n = Number(String(s ?? '').replace(',', '.'))
   return Number.isFinite(n) ? n : 0
 }
 
-function money(v: number) {
-  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(v)
+function addDays(d: Date, days: number): Date {
+  const x = new Date(d.getTime())
+  x.setDate(x.getDate() + days)
+  return x
+}
+
+function daysDiffInclusive(desde: string, hasta: string): number {
+  const d1 = new Date(desde + 'T00:00:00')
+  const d2 = new Date(hasta + 'T00:00:00')
+  const ms = d2.getTime() - d1.getTime()
+  const days = Math.floor(ms / (1000 * 60 * 60 * 24))
+  return days + 1
+}
+
+type ChartRow = {
+  label: string
+  ingresos: number
+  egresos: number
+  ganancia: number
+}
+
+function aggregateMonthly(rows: FinanceDayRow[]): ChartRow[] {
+  const map = new Map<string, ChartRow>()
+  for (const r of rows) {
+    const k = r.fecha.slice(0, 7) // YYYY-MM
+    const cur = map.get(k) || { label: k, ingresos: 0, egresos: 0, ganancia: 0 }
+    cur.ingresos += parseNum(r.ingresos)
+    cur.egresos += parseNum(r.egresos)
+    cur.ganancia += parseNum(r.ganancia)
+    map.set(k, cur)
+  }
+  return Array.from(map.values()).sort((a, b) => (a.label > b.label ? 1 : -1))
 }
 
 export default function FinanceReportPage() {
-  const today = formatDateYMD(new Date().toISOString())
-  const [desde, setDesde] = useState(today)
-  const [hasta, setHasta] = useState(today)
+  const today = useMemo(() => new Date(), [])
+  const [desde, setDesde] = useState<string>(formatDateYMD(addDays(today, -30)))
+  const [hasta, setHasta] = useState<string>(formatDateYMD(today))
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [report, setReport] = useState<FinanceReport | null>(null)
 
-  const [totales, setTotales] = useState<{ ingresos: string; egresos: string; ganancia: string } | null>(null)
-  const [serie, setSerie] = useState<Array<{ fecha: string; ingresos: string; egresos: string; ganancia: string }>>([])
-
-  const data = useMemo(
-    () =>
-      serie.map((x) => ({
-        fecha: x.fecha,
-        ingresos: toNum(x.ingresos),
-        egresos: toNum(x.egresos),
-        ganancia: toNum(x.ganancia),
-      })),
-    [serie]
-  )
-
-  const totIng = totales ? toNum(totales.ingresos) : 0
-  const totEgr = totales ? toNum(totales.egresos) : 0
-  const totGan = totales ? toNum(totales.ganancia) : 0
-
-  const onBuscar = async () => {
+  async function onBuscar() {
     try {
       setLoading(true)
       setError(null)
       const rep = await fetchFinanceReport({ desde, hasta })
-      setTotales(rep.totales)
-      setSerie(rep.serie_diaria)
+      setReport(rep)
     } catch (e: any) {
-      setError(drfErrorToMessage(e, 'No se pudo cargar el reporte.'))
+      setError(drfErrorToMessage(e))
     } finally {
       setLoading(false)
     }
   }
+
+  function applyPreset(kind: '7d' | '30d' | '90d' | '365d') {
+    const end = new Date()
+    const start =
+      kind === '7d'
+        ? addDays(end, -6)
+        : kind === '30d'
+        ? addDays(end, -29)
+        : kind === '90d'
+        ? addDays(end, -89)
+        : addDays(end, -364)
+
+    const d = formatDateYMD(start)
+    const h = formatDateYMD(end)
+    setDesde(d)
+    setHasta(h)
+  }
+
+  const chartData: ChartRow[] = useMemo(() => {
+    if (!report) return []
+    const days = daysDiffInclusive(report.desde, report.hasta)
+
+    if (days <= 31) {
+      return report.serie_diaria.map((r) => ({
+        label: r.fecha,
+        ingresos: parseNum(r.ingresos),
+        egresos: parseNum(r.egresos),
+        ganancia: parseNum(r.ganancia),
+      }))
+    }
+
+    return aggregateMonthly(report.serie_diaria)
+  }, [report])
+
+  const granularityLabel = useMemo(() => {
+    if (!report) return ''
+    const days = daysDiffInclusive(report.desde, report.hasta)
+    return days <= 31 ? 'Día a día' : 'Agrupado por mes'
+  }, [report])
 
   return (
     <div>
@@ -93,128 +148,124 @@ export default function FinanceReportPage() {
                 {loading ? 'Buscando...' : 'Buscar'}
               </button>
             </div>
+
+            <div className="col-12">
+              <div className="d-flex flex-wrap gap-2">
+                <button className="btn btn-sm btn-outline-secondary" onClick={() => applyPreset('7d')}>
+                  Última semana
+                </button>
+                <button className="btn btn-sm btn-outline-secondary" onClick={() => applyPreset('30d')}>
+                  Último mes
+                </button>
+                <button className="btn btn-sm btn-outline-secondary" onClick={() => applyPreset('90d')}>
+                  Últimos 3 meses
+                </button>
+                <button className="btn btn-sm btn-outline-secondary" onClick={() => applyPreset('365d')}>
+                  Último año
+                </button>
+
+                <div className="ms-auto text-muted small align-self-center">
+                  {report ? `Vista: ${granularityLabel}` : null}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {totales ? (
-        <div className="row g-3 mb-3">
-          <div className="col-12 col-md-4">
-            <div className="card">
-              <div className="card-body">
-                <div className="text-muted small">Ingresos</div>
-                <div className="h4 mb-0">{money(totIng)}</div>
-              </div>
-            </div>
-          </div>
-          <div className="col-12 col-md-4">
-            <div className="card">
-              <div className="card-body">
-                <div className="text-muted small">Egresos</div>
-                <div className="h4 mb-0">{money(totEgr)}</div>
-              </div>
-            </div>
-          </div>
-          <div className="col-12 col-md-4">
-            <div className="card">
-              <div className="card-body">
-                <div className="text-muted small">Ganancia</div>
-                <div className="h4 mb-0">{money(totGan)}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {!data.length ? (
-        <div className="text-muted">Elegí un rango y tocá “Buscar”.</div>
+      {!report ? (
+        <div className="text-muted">Elegí un rango y buscá.</div>
       ) : (
-        <div className="row g-3">
-          {/* 1) Linea: Ingresos */}
-          <div className="col-12 col-lg-6">
-            <div className="card">
-              <div className="card-body">
-                <div className="fw-semibold mb-2">Ingresos (por día)</div>
-                <div style={{ width: '100%', height: 260 }}>
-                  <ResponsiveContainer>
-                    <LineChart data={data}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="fecha" />
-                      <YAxis />
-                      <Tooltip formatter={(v: any) => money(Number(v))} />
-                      <Legend />
-                      <Line type="monotone" dataKey="ingresos" stroke="#0d6efd" strokeWidth={2} dot={false} />
-                    </LineChart>
-                  </ResponsiveContainer>
+        <>
+          <div className="row g-3 mb-3">
+            <div className="col-12 col-md-4">
+              <div className="card">
+                <div className="card-body">
+                  <div className="text-muted small">Ingresos</div>
+                  <div className="h4 mb-0">USD {money(parseNum(report.totales.ingresos))}</div>
+                </div>
+              </div>
+            </div>
+            <div className="col-12 col-md-4">
+              <div className="card">
+                <div className="card-body">
+                  <div className="text-muted small">Egresos</div>
+                  <div className="h4 mb-0">USD {money(parseNum(report.totales.egresos))}</div>
+                </div>
+              </div>
+            </div>
+            <div className="col-12 col-md-4">
+              <div className="card">
+                <div className="card-body">
+                  <div className="text-muted small">Ganancia</div>
+                  <div className="h4 mb-0">USD {money(parseNum(report.totales.ganancia))}</div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* 2) Linea: Egresos */}
-          <div className="col-12 col-lg-6">
-            <div className="card">
-              <div className="card-body">
-                <div className="fw-semibold mb-2">Egresos (por día)</div>
-                <div style={{ width: '100%', height: 260 }}>
-                  <ResponsiveContainer>
-                    <LineChart data={data}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="fecha" />
-                      <YAxis />
-                      <Tooltip formatter={(v: any) => money(Number(v))} />
-                      <Legend />
-                      <Line type="monotone" dataKey="egresos" stroke="#dc3545" strokeWidth={2} dot={false} />
-                    </LineChart>
-                  </ResponsiveContainer>
+          <div className="row g-3">
+            <div className="col-12 col-lg-6">
+              <div className="card">
+                <div className="card-body">
+                  <div className="fw-semibold mb-2">Ingresos</div>
+                  <div style={{ width: '100%', height: 300 }}>
+                    <ResponsiveContainer>
+                      <LineChart data={chartData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="label" />
+                        <YAxis />
+                        <Tooltip formatter={(v: any) => money(Number(v))} />
+                        <Legend />
+                        <Line type="monotone" dataKey="ingresos" strokeWidth={2} dot={false} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* 3) Linea: Ganancia */}
-          <div className="col-12 col-lg-6">
-            <div className="card">
-              <div className="card-body">
-                <div className="fw-semibold mb-2">Ganancia (por día)</div>
-                <div style={{ width: '100%', height: 260 }}>
-                  <ResponsiveContainer>
-                    <LineChart data={data}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="fecha" />
-                      <YAxis />
-                      <Tooltip formatter={(v: any) => money(Number(v))} />
-                      <Legend />
-                      <Line type="monotone" dataKey="ganancia" stroke="#198754" strokeWidth={2} dot={false} />
-                    </LineChart>
-                  </ResponsiveContainer>
+            <div className="col-12 col-lg-6">
+              <div className="card">
+                <div className="card-body">
+                  <div className="fw-semibold mb-2">Egresos</div>
+                  <div style={{ width: '100%', height: 300 }}>
+                    <ResponsiveContainer>
+                      <LineChart data={chartData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="label" />
+                        <YAxis />
+                        <Tooltip formatter={(v: any) => money(Number(v))} />
+                        <Legend />
+                        <Line type="monotone" dataKey="egresos" strokeWidth={2} dot={false} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* 4) Barras: Ingresos vs Egresos */}
-          <div className="col-12 col-lg-6">
-            <div className="card">
-              <div className="card-body">
-                <div className="fw-semibold mb-2">Ingresos vs Egresos</div>
-                <div style={{ width: '100%', height: 260 }}>
-                  <ResponsiveContainer>
-                    <BarChart data={data}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="fecha" />
-                      <YAxis />
-                      <Tooltip formatter={(v: any) => money(Number(v))} />
-                      <Legend />
-                      <Bar dataKey="ingresos" fill="#0d6efd" />
-                      <Bar dataKey="egresos" fill="#dc3545" />
-                    </BarChart>
-                  </ResponsiveContainer>
+            <div className="col-12">
+              <div className="card">
+                <div className="card-body">
+                  <div className="fw-semibold mb-2">Ganancia</div>
+                  <div style={{ width: '100%', height: 320 }}>
+                    <ResponsiveContainer>
+                      <BarChart data={chartData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="label" />
+                        <YAxis />
+                        <Tooltip formatter={(v: any) => money(Number(v))} />
+                        <Legend />
+                        <Bar dataKey="ganancia" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   )

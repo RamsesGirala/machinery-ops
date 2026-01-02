@@ -14,16 +14,13 @@ export interface MachineBase {
   updated_at: string
 }
 
-export type TipoEnum = 'TERRESTRE' | 'AEREO' | 'MARITIMO'
-export type EtapaEnum = 'HASTA_ADUANA' | 'POST_ADUANA'
-
 export interface LogisticsLeg {
   id: number
   desde: string
   hasta: string
-  tipo: TipoEnum
-  etapa: EtapaEnum
+  nombre: string
   total: string
+  etapa: string
   created_at: string
   updated_at: string
 }
@@ -32,16 +29,20 @@ export interface Tax {
   id: number
   nombre: string
   porcentaje: string
-  siempre_incluir: boolean
+  etapa: string
   created_at: string
   updated_at: string
 }
+
+export type EtapaEnum = 'PRE' | 'POST'
+export type TipoEnum = 'VENTA' | 'ALQUILER'
 
 export interface Budget {
   id: number
   numero: string
   fecha: string
   estado: string
+  machine_bases?: string[]
 
   tiene_compra?: boolean
   compra_id?: number | null
@@ -65,7 +66,7 @@ export interface BudgetItemAccessoryOut {
 export interface BudgetItemOut {
   id: number
   machine_base: number
-  machine_nombre: string
+  machine_base_nombre: string
   cantidad: number
   machine_total_snapshot: string
   subtotal_maquina_snapshot: string
@@ -76,16 +77,15 @@ export interface BudgetTaxOut {
   id: number
   tax: number
   tax_nombre: string
-  incluido: boolean
+  etapa: string
   porcentaje_snapshot: string
+  total_snapshot: string
 }
 
 export interface BudgetLogisticsOut {
   id: number
   logistics_leg: number
-  desde: string
-  hasta: string
-  tipo: string
+  logistics_nombre: string
   etapa: string
   total_snapshot: string
 }
@@ -93,10 +93,6 @@ export interface BudgetLogisticsOut {
 export interface BudgetDetail extends Budget {
   subtotal_maquinas_snapshot: string
   subtotal_accesorios_snapshot: string
-  subtotal_logistica_hasta_aduana_snapshot: string
-  subtotal_logistica_post_aduana_snapshot: string
-  costo_aduana_snapshot: string
-
   items: BudgetItemOut[]
   impuestos: BudgetTaxOut[]
   logisticas: BudgetLogisticsOut[]
@@ -110,7 +106,27 @@ export interface PurchasedUnit {
   machine_base: number
   machine_nombre: string
   estado: string
+  total_compra?: string
   identificador: string
+  created_at: string
+  updated_at: string
+}
+
+export interface RevenueEventForUnit {
+  id: number
+  tipo: string
+  fecha: string
+  monto_total: string
+  monto_mensual: string | null
+  notas: string
+
+  inicio_year: number | null
+  inicio_month: number | null
+  retorno_estimada_year: number | null
+  retorno_estimada_month: number | null
+  retorno_real_year: number | null
+  retorno_real_month: number | null
+
   created_at: string
   updated_at: string
 }
@@ -128,5 +144,7 @@ export interface PurchasedUnitDetail extends PurchasedUnit {
   total_compra: string
   notas_compra: string
   accesorios: PurchasedUnitAccessory[]
-}
 
+  venta: RevenueEventForUnit | null
+  alquileres: RevenueEventForUnit[]
+}

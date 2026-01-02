@@ -23,10 +23,9 @@ from machinery.models import (
     LogisticsStage,
 )
 
-from .repositories import (
-    BudgetRepository,
-)
+from .repositories import BudgetRepository
 from ..shared.errors import DomainError, ErrorCodes
+from machinery.purchases.services import PurchaseService  # ✅ usamos el service real
 
 D = Decimal
 
@@ -44,7 +43,6 @@ def _money(v: Decimal) -> Decimal:
 
 
 def _gen_numero() -> str:
-    # Ej: PRESU-20251231-153045
     now = timezone.now()
     return f"PRESU-{now:%Y%m%d-%H%M%S}"
 
@@ -54,7 +52,6 @@ class BudgetService:
     repo: BudgetRepository
 
     def list_qs(self):
-        # select/prefetch para list rápido
         return (
             self.repo.list_qs()
             .prefetch_related(
@@ -72,24 +69,63 @@ class BudgetService:
     def get(self, pk: int) -> Budget:
         return self.list_qs().get(pk=pk)
 
+    # ✅ NUEVO: caso de uso "marcar comprado" (solo DRAFT -> cierra -> compra)
+    @transaction.atomic
+    def purchase_from_draft(self, *, purchase_service: PurchaseService,budget_id: int, fecha_compra: str | None, notas: str = ""):
+        # Lock del budget para evitar carreras (cerrar/comprar en paralelo)
+        budget: Budget = (
+            Budget.objects.select_for_update()
+            .select_related("compra")
+            .get(pk=budget_id)
+        )
+
+        # Regla: SOLO DRAFT
+        if budget.estado != BudgetStatus.DRAFT:
+            raise DomainError(
+                ErrorCodes.CONFLICT,
+                message_override="Solo podés marcar como comprado un presupuesto en estado DRAFT.",
+                details={"budget_id": budget.id, "estado_actual": budget.estado},
+            )
+
+        # Regla: no debe existir compra
+        # (reverse one-to-one: puede no existir; usamos try para no romper)
+        try:
+            if budget.compra is not None:
+                raise DomainError(
+                    ErrorCodes.CONFLICT,
+                    message_override="Este presupuesto ya tiene una compra asociada.",
+                    details={"budget_id": budget.id, "purchase_id": budget.compra.id},
+                )
+        except Exception:
+            # No existe compra, ok
+            pass
+
+        # 1) Cerrar
+        budget.estado = BudgetStatus.CERRADO
+        budget.save(update_fields=["estado", "updated_at"])
+
+        # 2) Crear compra (PurchaseService sigue validando CERRADO)
+        return purchase_service.create_purchase_from_budget(
+            budget_id=budget_id,
+            fecha_compra=fecha_compra,
+            notas=notas or "",
+        )
+
     def delete(self, budget_id: int) -> None:
         budget: Budget = self.repo.get(budget_id)
 
-        # Regla 1: solo DRAFT
         if budget.estado != BudgetStatus.DRAFT:
             raise DomainError(
                 error=ErrorCodes.BUDGET_DELETE_NOT_ALLOWED,
                 details={"estado": budget.estado, "budget_id": budget.id},
             )
 
-        # Regla 2: no debe existir compra
         if hasattr(budget, "compra"):
             raise DomainError(
                 error=ErrorCodes.BUDGET_DELETE_NOT_ALLOWED,
                 details={"budget_id": budget.id, "purchase_id": budget.compra.id},
             )
 
-        # Por las dudas (carrera / integridad), si igual falla por FK protegida:
         try:
             self.repo.delete(budget)
         except ProtectedError:
@@ -99,19 +135,6 @@ class BudgetService:
             )
 
     def _apply_payload_to_budget(self, *, budget: Budget, payload: Dict[str, Any]) -> None:
-        """
-        Aplica el payload al presupuesto ya existente:
-        - crea items/accesorios
-        - crea logisticas seleccionadas
-        - crea impuestos aplicados
-        - recalcula snapshots del budget
-        - actualiza precios/porcentajes del catálogo si hay override
-        Asume que budget.items/logisticas/impuestos ya están vacíos.
-        """
-
-        # -------------------------
-        # Items (Máquinas + accesorios por item)
-        # -------------------------
         subtotal_maquinas = D("0.00")
         subtotal_accesorios = D("0.00")
 
@@ -156,9 +179,6 @@ class BudgetService:
                 )
                 subtotal_accesorios += bia.subtotal_snapshot
 
-        # -------------------------
-        # Logística
-        # -------------------------
         subtotal_log_hasta = D("0.00")
         subtotal_log_post = D("0.00")
 
@@ -182,14 +202,8 @@ class BudgetService:
             else:
                 subtotal_log_post += leg_total
 
-        # -------------------------
-        # Base imponible
-        # -------------------------
         base_imponible = _money(subtotal_maquinas + subtotal_accesorios + subtotal_log_hasta)
 
-        # -------------------------
-        # Impuestos
-        # -------------------------
         total_impuestos = D("0.00")
         impuestos: List[Dict[str, Any]] = payload.get("impuestos") or []
 
@@ -226,9 +240,6 @@ class BudgetService:
         costo_aduana = _money(subtotal_log_hasta + total_impuestos)
         total = _money(base_imponible + total_impuestos + subtotal_log_post)
 
-        # -------------------------
-        # Guardar snapshots en Budget
-        # -------------------------
         budget.subtotal_maquinas_snapshot = _money(subtotal_maquinas)
         budget.subtotal_accesorios_snapshot = _money(subtotal_accesorios)
         budget.subtotal_logistica_hasta_aduana_snapshot = _money(subtotal_log_hasta)
@@ -256,17 +267,13 @@ class BudgetService:
         fecha = payload.get("fecha") or date.today()
 
         budget = Budget.objects.create(numero=numero, fecha=fecha, estado=BudgetStatus.DRAFT)
-
-        # aplica líneas + snapshots + updates catálogo
         self._apply_payload_to_budget(budget=budget, payload=payload)
-
         return budget
 
     @transaction.atomic
     def update_from_payload(self, *, budget_id: int, payload: Dict[str, Any]) -> Budget:
         budget = self.repo.get_by_id_for_update(budget_id)
 
-        # Regla: solo DRAFT + sin compra
         if budget.estado != BudgetStatus.DRAFT:
             raise DomainError(
                 error=ErrorCodes.BUDGET_EDIT_NOT_ALLOWED,
@@ -279,16 +286,12 @@ class BudgetService:
                 details={"budget_id": budget.id, "purchase_id": budget.compra.id},
             )
 
-        # fecha (si no viene, mantenemos la actual)
         budget.fecha = payload.get("fecha") or budget.fecha
         budget.save(update_fields=["fecha", "updated_at"])
 
-        # borrar relaciones actuales
         budget.items.all().delete()
         budget.logisticas.all().delete()
         budget.impuestos.all().delete()
 
-        # recrear todo con la misma lógica de create
         self._apply_payload_to_budget(budget=budget, payload=payload)
-
         return budget

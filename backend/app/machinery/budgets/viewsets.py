@@ -81,19 +81,18 @@ class BudgetViewSet(
     @action(detail=True, methods=["post"], url_path="purchase")
     def purchase(self, request, pk=None):
         """
-        Marca presupuesto como comprado:
-        - crea Purchase
-        - crea PurchasedUnit por cada unidad (cantidad)
-        - estado de unidad: DEPOSITO
-        - cambia presupuesto a CERRADO
+        Marcar presupuesto como comprado (sin endpoint de cierre):
+        - requiere DRAFT
+        - el service lo cierra y luego crea la compra + stock
         """
         budget_id = int(pk)
         fecha_compra = request.data.get("fecha_compra")  # opcional "YYYY-MM-DD"
         notas = request.data.get("notas", "")
 
-        purchase = self.purchase_service.create_purchase_from_budget(
+        purchase = self.service.purchase_from_draft(
             budget_id=budget_id,
             fecha_compra=fecha_compra,
             notas=notas,
+            purchase_service=self.purchase_service,
         )
         return Response({"ok": True, "purchase_id": purchase.id}, status=status.HTTP_201_CREATED)

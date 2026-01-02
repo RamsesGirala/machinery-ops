@@ -101,8 +101,9 @@ class BudgetLogisticsOutSerializer(serializers.ModelSerializer):
 
 
 class BudgetListSerializer(serializers.ModelSerializer):
-    tiene_compra = serializers.SerializerMethodField()
     compra_id = serializers.SerializerMethodField()
+    tiene_compra = serializers.SerializerMethodField()
+    machine_bases = serializers.SerializerMethodField()
 
     class Meta:
         model = Budget
@@ -111,6 +112,7 @@ class BudgetListSerializer(serializers.ModelSerializer):
             "numero",
             "fecha",
             "estado",
+            "machine_bases",
             "tiene_compra",
             "compra_id",
             "base_imponible_snapshot",
@@ -120,12 +122,19 @@ class BudgetListSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
 
-    def get_tiene_compra(self, obj) -> bool:
-        # reverse OneToOne: budget.compra (Purchase)
-        return hasattr(obj, "compra")
-
     def get_compra_id(self, obj):
-        return getattr(getattr(obj, "compra", None), "id", None)
+        if hasattr(obj, "compra") and obj.compra:
+            return obj.compra.id
+        return None
+
+    def get_tiene_compra(self, obj):
+        return bool(hasattr(obj, "compra") and obj.compra)
+
+    def get_machine_bases(self, obj):
+        # nombres únicos, en orden alfabético
+        qs = obj.items.select_related("machine_base").all()
+        nombres = sorted({it.machine_base.nombre for it in qs})
+        return nombres
 
 
 class BudgetDetailSerializer(serializers.ModelSerializer):
