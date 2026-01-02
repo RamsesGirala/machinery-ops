@@ -6,6 +6,7 @@ import ErrorAlert from '../../components/global/ErrorAlert'
 
 import UnitLifecycleModal from '../../components/units/UnitLifecycleModal'
 import { useUnitLifecycleModal } from '../../hooks/useUnitLifecycleModal'
+import { formatUSD } from '../../utils/money'
 
 function ym(ev: RevenueEventForUnit, which: 'inicio' | 'est' | 'real'): string {
   const y =
@@ -115,7 +116,7 @@ export default function UnitDetailPage() {
 
               <div className="col-12 col-md-3">
                 <div className="text-muted small">Costo compra</div>
-                <div className="fw-semibold">USD {data.total_compra}</div>
+                <div className="fw-semibold">{formatUSD(data.total_compra)}</div>
               </div>
 
               <div className="col-12">
@@ -131,7 +132,7 @@ export default function UnitDetailPage() {
                   <ul className="mb-0">
                     {data.accesorios.map((a) => (
                       <li key={a.id}>
-                        {a.accessory_nombre} x {a.cantidad} — USD {a.accessory_total_snapshot}
+                        {a.accessory_nombre} x {a.cantidad} — {formatUSD(a.accessory_total_snapshot)}
                       </li>
                     ))}
                   </ul>
@@ -151,7 +152,7 @@ export default function UnitDetailPage() {
                       </div>
                       <div>
                         <div className="text-muted small">Total</div>
-                        <div className="fw-semibold">USD {data.venta.monto_total}</div>
+                        <div className="fw-semibold">{formatUSD(data.venta.monto_total)}</div>
                       </div>
                     </div>
                     {data.venta.notas ? <div className="text-muted small mt-2">{data.venta.notas}</div> : null}
@@ -189,8 +190,8 @@ export default function UnitDetailPage() {
                               <td>{ym(a, 'inicio')}</td>
                               <td>{ym(a, 'est')}</td>
                               <td>{ym(a, 'real')}</td>
-                              <td className="text-end">USD {a.monto_mensual ?? '—'}</td>
-                              <td className="text-end">USD {a.monto_total}</td>
+                              <td className="text-end">{formatUSD(a.monto_mensual)}</td>
+                              <td className="text-end">{formatUSD(a.monto_total)}</td>
                               <td>
                                 {activo ? <span className="badge text-bg-primary">Activo</span> : <span className="badge text-bg-secondary">Finalizado</span>}
                               </td>

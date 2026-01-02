@@ -3,6 +3,7 @@ import ErrorAlert from '../../components/global/ErrorAlert'
 import { drfErrorToMessage } from '../../utils/drfErrorToMessage'
 import { fetchFinanceReport, type FinanceDayRow, type FinanceReport } from '../../api/reportsApi'
 import { formatDateYMD } from '../../utils/date'
+import { formatUSD } from '../../utils/money'
 
 import {
   ResponsiveContainer,
@@ -16,10 +17,6 @@ import {
   BarChart,
   Bar,
 } from 'recharts'
-
-function money(n: number): string {
-  return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-}
 
 function parseNum(s: any): number {
   const n = Number(String(s ?? '').replace(',', '.'))
@@ -182,7 +179,7 @@ export default function FinanceReportPage() {
               <div className="card">
                 <div className="card-body">
                   <div className="text-muted small">Ingresos</div>
-                  <div className="h4 mb-0">USD {money(parseNum(report.totales.ingresos))}</div>
+                  <div className="h4 mb-0">{formatUSD(parseNum(report.totales.ingresos))}</div>
                 </div>
               </div>
             </div>
@@ -190,7 +187,7 @@ export default function FinanceReportPage() {
               <div className="card">
                 <div className="card-body">
                   <div className="text-muted small">Egresos</div>
-                  <div className="h4 mb-0">USD {money(parseNum(report.totales.egresos))}</div>
+                  <div className="h4 mb-0">{formatUSD(parseNum(report.totales.egresos))}</div>
                 </div>
               </div>
             </div>
@@ -198,7 +195,7 @@ export default function FinanceReportPage() {
               <div className="card">
                 <div className="card-body">
                   <div className="text-muted small">Ganancia</div>
-                  <div className="h4 mb-0">USD {money(parseNum(report.totales.ganancia))}</div>
+                  <div className="h4 mb-0">{formatUSD(parseNum(report.totales.ganancia))}</div>
                 </div>
               </div>
             </div>
@@ -215,7 +212,7 @@ export default function FinanceReportPage() {
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="label" />
                         <YAxis />
-                        <Tooltip formatter={(v: any) => money(Number(v))} />
+                        <Tooltip formatter={(v: any) => formatUSD(v)} />
                         <Legend />
                         <Line type="monotone" dataKey="ingresos" strokeWidth={2} dot={false} />
                       </LineChart>
@@ -235,7 +232,7 @@ export default function FinanceReportPage() {
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="label" />
                         <YAxis />
-                        <Tooltip formatter={(v: any) => money(Number(v))} />
+                        <Tooltip formatter={(v: any) => formatUSD(v)} />
                         <Legend />
                         <Line type="monotone" dataKey="egresos" strokeWidth={2} dot={false} />
                       </LineChart>
@@ -255,7 +252,7 @@ export default function FinanceReportPage() {
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="label" />
                         <YAxis />
-                        <Tooltip formatter={(v: any) => money(Number(v))} />
+                        <Tooltip formatter={(v: any) => formatUSD(v)} />
                         <Legend />
                         <Bar dataKey="ganancia" />
                       </BarChart>

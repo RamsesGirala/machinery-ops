@@ -5,6 +5,7 @@ import type { Budget } from '../../api/types/models'
 import PaginationBar from '../../components/global/PaginationBar'
 import ErrorAlert from '../../components/global/ErrorAlert'
 import ConfirmModal from '../../components/global/ConfirmModal'
+import { formatUSD } from '../../utils/money'
 
 export default function BudgetsListPage() {
   const nav = useNavigate()
@@ -173,7 +174,7 @@ export default function BudgetsListPage() {
                     <td>{b.numero}</td>
                     <td>{b.machine_nombres}</td>
                     <td>{b.fecha}</td>
-                    <td>USD {b.total_snapshot}</td>
+                    <td>{formatUSD(b.total_snapshot)}</td>
                     <td>
                       <span className={`badge ${b.estado === 'CERRADO' ? 'bg-success' : 'bg-secondary'}`}>
                         {b.estado}

@@ -6,6 +6,7 @@ import { FinishRentalPayload, MarkRentedPayload, MarkSoldPayload } from '../../a
 import type { PurchasedUnitDetail, PurchasedUnit } from '../../api/types/models'
 import { drfErrorToMessage } from '../../utils/drfErrorToMessage'
 import { suggestMonthlyRent, suggestSaleTotal } from '../../config/pricing'
+import { formatUSD } from '../../utils/money'
 
 export type UnitLifecycleMode = 'rent' | 'finish' | 'sell'
 
@@ -172,7 +173,7 @@ export default function UnitLifecycleModal({ show, mode, unit, onClose, onSucces
             <span className="text-muted">{(unit as any).estado}</span>
           </div>
           <div className="text-muted small">
-            Costo compra: ${(unit as any).total_compra ?? '—'}
+            Costo compra: {formatUSD((unit as any).total_compra)}
           </div>
           <hr />
         </div>
@@ -236,7 +237,7 @@ export default function UnitLifecycleModal({ show, mode, unit, onClose, onSucces
               disabled={loading}
             />
             <div className="text-muted small mt-1">
-              Sugerido: ${Math.round(suggestMonthlyRent(cost)).toLocaleString()}
+              Sugerido: {formatUSD(Math.round(suggestMonthlyRent(cost)))}
             </div>
           </div>
 
@@ -252,7 +253,7 @@ export default function UnitLifecycleModal({ show, mode, unit, onClose, onSucces
 
           <div className="col-12">
             <div className="text-muted small">
-              Total estimado: <b>${rentPreview.total.toLocaleString()}</b> · Meses: <b>{rentPreview.meses}</b>
+              Total estimado: <b>{formatUSD(rentPreview.total)}</b> · Meses: <b>{rentPreview.meses}</b>
             </div>
           </div>
         </div>
@@ -314,7 +315,7 @@ export default function UnitLifecycleModal({ show, mode, unit, onClose, onSucces
               disabled={loading}
             />
             <div className="text-muted small mt-1">
-              Sugerido: ${Math.round(suggestSaleTotal(cost)).toLocaleString()}
+              Sugerido: {formatUSD(Math.round(suggestSaleTotal(cost)))}
             </div>
           </div>
 

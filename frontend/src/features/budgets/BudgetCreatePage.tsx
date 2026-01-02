@@ -9,6 +9,7 @@ import { fetchTaxes } from '../../api/taxesApi'
 
 import type { MachineBase, Accessory, LogisticsLeg, Tax } from '../../api/types/models'
 import type { BudgetCreatePayload } from '../../api/types/payloads'
+import { formatUSD } from '../../utils/money'
 import ErrorAlert from '../../components/global/ErrorAlert'
 
 type MachineLine = {
@@ -23,9 +24,6 @@ type TaxSel = { tax_id: number; incluido: boolean; porcentaje: string; nombre: s
 function toNum(s: string): number {
   const n = Number(String(s ?? '').replace(',', '.'))
   return Number.isFinite(n) ? n : 0
-}
-function money(n: number): string {
-  return n.toFixed(2)
 }
 
 export default function BudgetCreatePage() {
@@ -378,7 +376,7 @@ export default function BudgetCreatePage() {
                 </option>
                 {machines.map((m) => (
                   <option key={m.id} value={m.id}>
-                    {m.nombre} (USD {m.total})
+                    {m.nombre} ({formatUSD(m.total)})
                   </option>
                 ))}
               </select>
@@ -408,7 +406,7 @@ export default function BudgetCreatePage() {
                   <div className="row g-2 align-items-end">
                     <div className="col-md-4">
                       <div className="fw-semibold">{m?.nombre ?? `Machine #${it.machine_base_id}`}</div>
-                      <div className="text-muted small">Precio sugerido: USD {m?.total}</div>
+                      <div className="text-muted small">Precio sugerido: {formatUSD(m?.total)}</div>
                     </div>
 
                     <div className="col-md-2">
@@ -468,7 +466,7 @@ export default function BudgetCreatePage() {
                           </option>
                           {accessories.map((a) => (
                             <option key={a.id} value={a.id}>
-                              {a.nombre} (USD {a.total})
+                              {a.nombre} ({formatUSD(a.total)})
                             </option>
                           ))}
                         </select>
@@ -497,7 +495,7 @@ export default function BudgetCreatePage() {
                             <div key={aidx} className="row g-2 align-items-end mb-1">
                               <div className="col-md-5">
                                 <div className="small">{ad?.nombre ?? `Accessory #${a.accessory_id}`}</div>
-                                <div className="text-muted small">Sugerido: USD {ad?.total}</div>
+                                <div className="text-muted small">Sugerido: {formatUSD(ad?.total)}</div>
                               </div>
                               <div className="col-md-2">
                                 <label className="form-label form-label-sm">Qty</label>
@@ -611,7 +609,7 @@ export default function BudgetCreatePage() {
                               }))
                             }}
                           />
-                          {!checked && <div className="form-text">Sugerido: USD {l.total}</div>}
+                          {!checked && <div className="form-text">Sugerido: {formatUSD(l.total)}</div>}
                         </td>
                       </tr>
                     )
@@ -680,32 +678,32 @@ export default function BudgetCreatePage() {
           <div className="row g-2">
             <div className="col-md-3">
               <div className="text-muted">Subtotal máquinas</div>
-              <div className="fs-5">USD {money(calc.subtotalMaquinas)}</div>
+              <div className="fs-5">{formatUSD(calc.subtotalMaquinas)}</div>
             </div>
             <div className="col-md-3">
               <div className="text-muted">Subtotal accesorios</div>
-              <div className="fs-5">USD {money(calc.subtotalAcc)}</div>
+              <div className="fs-5">{formatUSD(calc.subtotalAcc)}</div>
             </div>
             <div className="col-md-3">
               <div className="text-muted">Logística HASTA_ADUANA</div>
-              <div className="fs-5">USD {money(calc.logHasta)}</div>
+              <div className="fs-5">{formatUSD(calc.logHasta)}</div>
             </div>
             <div className="col-md-3">
               <div className="text-muted">Logística POST_ADUANA</div>
-              <div className="fs-5">USD {money(calc.logPost)}</div>
+              <div className="fs-5">{formatUSD(calc.logPost)}</div>
             </div>
 
             <div className="col-md-4 mt-3">
               <div className="text-muted">Base imponible</div>
-              <div className="fs-4">USD {money(calc.baseImponible)}</div>
+              <div className="fs-4">{formatUSD(calc.baseImponible)}</div>
             </div>
             <div className="col-md-4 mt-3">
               <div className="text-muted">Impuestos</div>
-              <div className="fs-4">USD {money(calc.impuestos)}</div>
+              <div className="fs-4">{formatUSD(calc.impuestos)}</div>
             </div>
             <div className="col-md-4 mt-3">
               <div className="text-muted">Total</div>
-              <div className="fs-4">USD {money(calc.total)}</div>
+              <div className="fs-4">{formatUSD(calc.total)}</div>
             </div>
           </div>
 

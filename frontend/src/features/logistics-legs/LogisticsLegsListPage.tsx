@@ -10,6 +10,7 @@ import ErrorAlert from '../../components/global/ErrorAlert'
 import ConfirmModal from '../../components/global/ConfirmModal'
 import { useFlashFromLocation } from '../../hooks/useFlashFromLocation'
 import { drfErrorToMessage } from '../../utils/drfErrorToMessage'
+import { formatUSD } from '../../utils/money'
 
 const PAGE_SIZES = [10, 20, 50]
 
@@ -110,7 +111,7 @@ const LogisticsLegsListPage: React.FC = () => {
                   <td>{it.hasta}</td>
                   <td><span className="badge badge-soft rounded-pill">{it.tipo}</span></td>
                   <td><span className="badge badge-soft rounded-pill">{it.etapa}</span></td>
-                  <td>{it.total}</td>
+                  <td>{formatUSD(it.total)}</td>
                   <td className="text-end">
                     <Link to={`/logistics-legs/${it.id}/editar`} className="btn btn-sm btn-outline-secondary rounded-pill me-2">
                       Editar

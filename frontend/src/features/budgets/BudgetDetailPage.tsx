@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { fetchBudget } from '../../api/budgetsApi'
 import type { BudgetDetail } from '../../api/types/models'
 import ErrorAlert from '../../components/global/ErrorAlert'
+import { formatUSD } from '../../utils/money'
 
 export default function BudgetDetailPage() {
   const { id } = useParams()
@@ -46,19 +47,19 @@ export default function BudgetDetailPage() {
             <div className="col-md-4">
               <div className="card"><div className="card-body">
                 <div className="text-muted">Base imponible</div>
-                <div className="fs-4">USD {data.base_imponible_snapshot}</div>
+                <div className="fs-4">{formatUSD(data.base_imponible_snapshot)}</div>
               </div></div>
             </div>
             <div className="col-md-4">
               <div className="card"><div className="card-body">
                 <div className="text-muted">Impuestos</div>
-                <div className="fs-4">USD {data.total_impuestos_snapshot}</div>
+                <div className="fs-4">{formatUSD(data.total_impuestos_snapshot)}</div>
               </div></div>
             </div>
             <div className="col-md-4">
               <div className="card"><div className="card-body">
                 <div className="text-muted">Total</div>
-                <div className="fs-4">USD {data.total_snapshot}</div>
+                <div className="fs-4">{formatUSD(data.total_snapshot)}</div>
               </div></div>
             </div>
           </div>
@@ -70,7 +71,7 @@ export default function BudgetDetailPage() {
                 <div key={it.id} className="border rounded p-2 mb-2">
                   <div className="d-flex justify-content-between">
                     <div><strong>{it.machine_nombre}</strong> x {it.cantidad}</div>
-                    <div>USD {it.subtotal_maquina_snapshot}</div>
+                    <div>{formatUSD(it.subtotal_maquina_snapshot)}</div>
                   </div>
                   {it.accesorios.length > 0 && (
                     <div className="mt-2 text-muted">
@@ -78,7 +79,7 @@ export default function BudgetDetailPage() {
                       <ul className="mb-0">
                         {it.accesorios.map(a => (
                           <li key={a.id}>
-                            {a.accessory_nombre} x {a.cantidad} — USD {a.subtotal_snapshot}
+                            {a.accessory_nombre} x {a.cantidad} — {formatUSD(a.subtotal_snapshot)}
                           </li>
                         ))}
                       </ul>
@@ -95,7 +96,7 @@ export default function BudgetDetailPage() {
               <ul className="mb-0">
                 {data.logisticas.map(l => (
                   <li key={l.id}>
-                    {l.desde} → {l.hasta} ({l.tipo}, {l.etapa}) — USD {l.total_snapshot}
+                    {l.desde} → {l.hasta} ({l.tipo}, {l.etapa}) — {formatUSD(l.total_snapshot)}
                   </li>
                 ))}
               </ul>
