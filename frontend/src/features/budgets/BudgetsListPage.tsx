@@ -172,7 +172,17 @@ export default function BudgetsListPage() {
                 items.map((b) => (
                   <tr key={b.id}>
                     <td>{b.numero}</td>
-                    <td>{b.machine_nombres}</td>
+                    <td>
+                      {b.machine_bases?.length ? (
+                        <ul className="mb-0 ps-3">
+                          {b.machine_bases.map((name, idx) => (
+                            <li key={idx}>{name}</li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <span className="text-muted">—</span>
+                      )}
+                    </td>
                     <td>{b.fecha}</td>
                     <td>{formatUSD(b.total_snapshot)}</td>
                     <td>
