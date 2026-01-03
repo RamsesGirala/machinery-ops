@@ -1,5 +1,5 @@
 from __future__ import annotations
-
+from uuid import uuid4
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal, ROUND_HALF_UP
@@ -44,7 +44,7 @@ def _money(v: Decimal) -> Decimal:
 
 def _gen_numero() -> str:
     now = timezone.now()
-    return f"PRESU-{now:%Y%m%d-%H%M%S}"
+    return f"PRESU-{now:%Y%m%d-%H%M%S-%f}-{uuid4().hex[:6].upper()}"
 
 
 @dataclass
