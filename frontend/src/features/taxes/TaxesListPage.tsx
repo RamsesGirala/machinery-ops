@@ -10,6 +10,7 @@ import ErrorAlert from '../../components/global/ErrorAlert'
 import ConfirmModal from '../../components/global/ConfirmModal'
 import { useFlashFromLocation } from '../../hooks/useFlashFromLocation'
 import { drfErrorToMessage } from '../../utils/drfErrorToMessage'
+import { formatUSD } from '../../utils/money'
 
 const PAGE_SIZES = [10, 20, 50]
 
@@ -84,6 +85,7 @@ const TaxesListPage: React.FC = () => {
             <tr>
               <th>Nombre</th>
               <th>Porcentaje</th>
+              <th>Minimo</th>
               <th>Siempre incluir</th>
               <th style={{ width: 220 }} className="text-end">Acciones</th>
             </tr>
@@ -105,7 +107,8 @@ const TaxesListPage: React.FC = () => {
               items.map((it) => (
                 <tr key={it.id}>
                   <td className="fw-semibold">{it.nombre}</td>
-                  <td>{it.porcentaje}</td>
+                  <td>{it.porcentaje}%</td>
+                  <td>{(it.monto_minimo === null) ? '-' : formatUSD(it.monto_minimo)}</td>
                   <td>{it.siempre_incluir ? 'Sí' : 'No'}</td>
                   <td className="text-end">
                     <Link to={`/taxes/${it.id}/editar`} className="btn btn-sm btn-outline-secondary rounded-pill me-2">

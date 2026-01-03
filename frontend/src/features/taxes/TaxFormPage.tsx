@@ -14,7 +14,7 @@ const TaxFormPage: React.FC = () => {
   const [nombre, setNombre] = useState('')
   const [porcentaje, setPorcentaje] = useState('0')
   const [siempreIncluir, setSiempreIncluir] = useState(false)
-
+  const [montoMinimo, setMontoMinimo] = useState<string>('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -29,6 +29,7 @@ const TaxFormPage: React.FC = () => {
         const data = await fetchTax(Number(id))
         setNombre(data.nombre)
         setPorcentaje(data.porcentaje)
+        setMontoMinimo(data.monto_minimo ?? '')
         setSiempreIncluir(Boolean(data.siempre_incluir))
       } catch (e: any) {
         setError(drfErrorToMessage(e, 'No se pudo cargar el tax.'))
@@ -46,11 +47,11 @@ const TaxFormPage: React.FC = () => {
 
     try {
       if (isEdit) {
-        const payload: TaxUpdatePayload = { nombre, porcentaje, siempre_incluir: siempreIncluir }
+        const payload: TaxUpdatePayload = { nombre, porcentaje, monto_minimo: montoMinimo.trim() ? montoMinimo : null,siempre_incluir: siempreIncluir }
         await editarTax(Number(id), payload)
         navigate('/taxes', { state: { flash: { type: 'success', message: 'Tax actualizado.' } } })
       } else {
-        const payload: TaxCreatePayload = { nombre, porcentaje, siempre_incluir: siempreIncluir }
+        const payload: TaxCreatePayload = { nombre, porcentaje, monto_minimo: montoMinimo.trim() ? montoMinimo : null, siempre_incluir: siempreIncluir }
         await crearTax(payload)
         navigate('/taxes', { state: { flash: { type: 'success', message: 'Tax creado.' } } })
       }
@@ -83,6 +84,17 @@ const TaxFormPage: React.FC = () => {
         <div className="col-12 col-md-4">
           <label className="form-label">Porcentaje</label>
           <input className="form-control" value={porcentaje} onChange={(e) => setPorcentaje(e.target.value)} required />
+        </div>
+
+        <div className="col-12 col-md-4">
+          <label className="form-label">Mínimo (U$D)</label>
+          <input
+            className="form-control"
+            value={montoMinimo}
+            onChange={(e) => setMontoMinimo(e.target.value)}
+            placeholder="Ej: 450.00 (opcional)"
+          />
+          <div className="form-text">Si se setea, el impuesto será MAX(% calculado, mínimo).</div>
         </div>
 
         <div className="col-12">

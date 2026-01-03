@@ -113,6 +113,9 @@ export default function BudgetDetailPage() {
                   data.impuestos.map((t) => (
                     <li key={t.id}>
                       {t.tax_nombre} — {t.porcentaje_snapshot}%
+                      {t.monto_minimo_snapshot ? ` (mín ${formatUSD(t.monto_minimo_snapshot)})` : ''}
+                      {' — '}
+                      <b>{formatUSD(t.monto_aplicado_snapshot)}</b>
                     </li>
                   ))
                 )}

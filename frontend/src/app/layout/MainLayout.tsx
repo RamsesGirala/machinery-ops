@@ -65,7 +65,7 @@ const MainLayout: React.FC = () => {
           </NavLink>
 
           <NavLink to="/reports/finance" className={linkClass}>
-            Finanzas
+            Finances
           </NavLink>
         </div>
       </aside>

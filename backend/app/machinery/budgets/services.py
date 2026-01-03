@@ -216,24 +216,47 @@ class BudgetService:
         for tx in impuestos:
             tax: Tax = Tax.objects.get(pk=tx["tax_id"])
             incluido = bool(tx.get("incluido", True))
+
+            # % override (igual que hoy)
             porcentaje = _d(tx.get("porcentaje") or tax.porcentaje)
 
             porc2 = porcentaje.quantize(D("0.01"), rounding=ROUND_HALF_UP)
             tax_porc2 = tax.porcentaje.quantize(D("0.01"), rounding=ROUND_HALF_UP)
-
             if porc2 != tax_porc2:
                 tax.porcentaje = porc2
                 tax.save(update_fields=["porcentaje"])
+
+            # ✅ mínimo override SOLO si el impuesto del catálogo tiene mínimo
+            # si el tax no tiene mínimo, ignoramos cualquier monto_minimo que venga
+            monto_minimo = None
+            if tax.monto_minimo is not None:
+                override = tx.get("monto_minimo", None)
+                monto_minimo = _money(_d(override)) if override is not None else _money(tax.monto_minimo)
+
+                if override is not None:
+                    new_min2 = _money(_d(override))
+                    old_min2 = _money(tax.monto_minimo) if tax.monto_minimo is not None else None
+
+                    if old_min2 is None or new_min2 != old_min2:
+                        tax.monto_minimo = new_min2
+                        tax.save(update_fields=["monto_minimo"])
+
+            monto_pct = _money(base_imponible * (porcentaje / D("100.00")))
+            monto_aplicado = monto_pct
+            if monto_minimo is not None:
+                monto_aplicado = _money(max(monto_pct, monto_minimo))
 
             BudgetTaxApplied.objects.create(
                 budget=budget,
                 tax=tax,
                 incluido=incluido,
                 porcentaje_snapshot=porcentaje,
+                monto_minimo_snapshot=monto_minimo,
+                monto_aplicado_snapshot=(monto_aplicado if incluido else D("0.00")),
             )
 
             if incluido:
-                total_impuestos += _money(base_imponible * (porcentaje / D("100.00")))
+                total_impuestos += _money(monto_aplicado)
 
         total_impuestos = _money(total_impuestos)
 

@@ -25,7 +25,7 @@ class AccessorySerializer(serializers.ModelSerializer):
 class TaxSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tax
-        fields = ["id", "nombre", "porcentaje", "siempre_incluir", "created_at", "updated_at"]
+        fields = ["id", "nombre", "porcentaje", "monto_minimo", "siempre_incluir", "created_at", "updated_at"]
         read_only_fields = ["id", "created_at", "updated_at"]
 
 class LogisticsLegSerializer(serializers.ModelSerializer):

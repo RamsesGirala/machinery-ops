@@ -38,6 +38,13 @@ class Tax(TimeStampedModel):
         decimal_places=2,
         validators=[MinValueValidator(Decimal("0.00")), MaxValueValidator(Decimal("100.00"))],
     )
+    monto_minimo = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        validators=[USD_VALIDATOR],
+        null=True,
+        blank=True,
+    )
     siempre_incluir = models.BooleanField(default=False)
 
     class Meta:

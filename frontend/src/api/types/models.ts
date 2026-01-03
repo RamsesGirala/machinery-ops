@@ -29,10 +29,12 @@ export interface Tax {
   id: number
   nombre: string
   porcentaje: string
-  etapa: string
+  monto_minimo: string | null
+  siempre_incluir: boolean
   created_at: string
   updated_at: string
 }
+
 
 export type EtapaEnum = 'PRE' | 'POST'
 export type TipoEnum = 'VENTA' | 'ALQUILER'
@@ -77,9 +79,9 @@ export interface BudgetTaxOut {
   id: number
   tax: number
   tax_nombre: string
-  etapa: string
   porcentaje_snapshot: string
-  total_snapshot: string
+  monto_minimo_snapshot: string | null
+  monto_aplicado_snapshot: string
 }
 
 export interface BudgetLogisticsOut {

@@ -23,7 +23,8 @@ export type LogisticsLegUpdatePayload = LogisticsLegCreatePayload
 export type TaxCreatePayload = {
   nombre: string
   porcentaje: string
-  etapa: EtapaEnum
+  monto_minimo?: string | null
+  siempre_incluir: boolean
 }
 export type TaxUpdatePayload = TaxCreatePayload
 
@@ -35,8 +36,11 @@ export type BudgetItemIn = {
 
 export type BudgetTaxIn = {
   tax_id: number
-  etapa: EtapaEnum
+  incluido?: boolean
+  porcentaje?: string
+  monto_minimo?: string | null
 }
+
 
 export type BudgetLogisticsIn = {
   logistics_leg_id: number

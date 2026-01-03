@@ -173,16 +173,16 @@ def apply_seed(clear_first: bool = True) -> SeedResult:
     # - No es un cálculo legal exacto, es “catálogo” con sentido.
     # ----------------------------
     taxes = [
-        ("IVA (21%)", "21.00", True),
-        ("Derechos de Importación (14%)", "14.00", True),
-        ("Tasa de Estadística (3%)", "3.00", True),
-        ("Percepción IVA (20%)", "20.00", False),
-        ("Percepción Ganancias (6%)", "6.00", False),
-        ("Ingresos Brutos (3.50%)", "3.50", False),
-        ("Tasa Aduanera/Servicios (1%)", "1.00", False),
+        ("IVA", "21.00", True, None),
+        ("Derechos de Importación", "14.00", True, None),
+        ("Tasa de Estadística", "3.00", True, None),
+        ("Percepción IVA", "20.00", False, None),
+        ("Percepción Ganancias", "6.00", False, None),
+        ("Ingresos Brutos", "3.50", False, None),
+        ("Tasa Aduanera/Servicios", "1.00", False, 250),
     ]
     Tax.objects.bulk_create(
-        [Tax(nombre=n, porcentaje=_d(p), siempre_incluir=si) for n, p, si in taxes],
+        [Tax(nombre=n, porcentaje=_d(p), siempre_incluir=si, monto_minimo=mn) for n, p, si, mn in taxes],
         ignore_conflicts=False,
     )
 

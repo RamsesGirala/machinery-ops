@@ -28,7 +28,7 @@ class BudgetTaxInSerializer(serializers.Serializer):
     tax_id = serializers.IntegerField()
     incluido = serializers.BooleanField(required=False, default=True)
     porcentaje = serializers.DecimalField(max_digits=6, decimal_places=2, required=False)
-
+    monto_minimo = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, allow_null=True)
 
 class BudgetLogisticsInSerializer(serializers.Serializer):
     logistics_leg_id = serializers.IntegerField()
@@ -86,7 +86,7 @@ class BudgetTaxOutSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = BudgetTaxApplied
-        fields = ["id", "tax", "tax_nombre", "porcentaje_snapshot"]
+        fields = ["id", "tax", "tax_nombre", "porcentaje_snapshot", "monto_minimo_snapshot", "monto_aplicado_snapshot"]
 
 
 class BudgetLogisticsOutSerializer(serializers.ModelSerializer):

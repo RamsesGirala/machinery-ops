@@ -122,6 +122,22 @@ class BudgetTaxApplied(TimeStampedModel):
         default=Decimal("0.00"),
     )
 
+    monto_minimo_snapshot = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        validators=[USD_VALIDATOR],
+        null=True,
+        blank=True,
+    )
+
+    monto_aplicado_snapshot = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        validators=[USD_VALIDATOR],
+        default=Decimal("0.00"),
+    )
+
+
     class Meta:
         db_table = "budget_tax_applied"
         ordering = ["id"]

@@ -19,7 +19,7 @@ type MachineLine = {
 }
 
 type LogisticsSel = { logistics_leg_id: number; total: string; etapa: string }
-type TaxSel = { tax_id: number; incluido: boolean; porcentaje: string; nombre: string }
+type TaxSel = { tax_id: number; incluido: boolean; porcentaje: string; nombre: string; monto_minimo?: string | null }
 
 function toNum(s: string): number {
   const n = Number(String(s ?? '').replace(',', '.'))
@@ -90,6 +90,7 @@ export default function BudgetCreatePage() {
             incluido: tx.siempre_incluir ? true : false,
             porcentaje: tx.porcentaje,
             nombre: tx.nombre,
+            monto_minimo: tx.monto_minimo ?? null,
           }
         }
         setTaxSel(init)
@@ -169,7 +170,8 @@ export default function BudgetCreatePage() {
           const porcentaje = String(tx.porcentaje_snapshot ?? tx.porcentaje ?? '')
           const incluido = Boolean(tx.incluido ?? true)
           const nombre = String(tx.nombre ?? (taxes.find((x) => x.id === tid)?.nombre ?? ''))
-          tsUpdate[tid] = { tax_id: tid, incluido, porcentaje, nombre }
+          const monto_minimo = tx.monto_minimo_snapshot ?? null
+          tsUpdate[tid] = { tax_id: tid, incluido, porcentaje, nombre, monto_minimo}
         }
 
         // combinamos con taxSel actual (para conservar los que no están en el presupuesto)
@@ -239,13 +241,28 @@ export default function BudgetCreatePage() {
     let impuestos = 0
     for (const tx of Object.values(taxSel)) {
       if (!tx.incluido) continue
-      impuestos += baseImponible * (toNum(tx.porcentaje) / 100)
+
+      const pct = toNum(tx.porcentaje) / 100
+      const montoPct = baseImponible * pct
+
+      // ✅ mínimo solo si el tax del catálogo tiene mínimo
+      const catalogMin = taxes.find((x) => x.id === tx.tax_id)?.monto_minimo ?? null
+      let monto = montoPct
+
+      if (catalogMin !== null && catalogMin !== undefined) {
+        const minOverrideOrCatalog = tx.monto_minimo ?? catalogMin
+        const minVal = toNum(String(minOverrideOrCatalog))
+        monto = Math.max(montoPct, minVal)
+      }
+
+      impuestos += monto
     }
+
 
     const total = baseImponible + impuestos + logPost
 
     return { subtotalMaquinas, subtotalAcc, logHasta, logPost, baseImponible, impuestos, total }
-  }, [items, logSel, taxSel, machinePriceById, accessoryPriceById, machineById, accessoryById])
+  }, [items, logSel, taxSel, taxes, machinePriceById, accessoryPriceById, machineById, accessoryById])
 
   function addMachineLine(machineId: number) {
     const m = machineById.get(machineId)
@@ -317,11 +334,18 @@ export default function BudgetCreatePage() {
           logistics_leg_id: l.logistics_leg_id,
           total: l.total,
         })),
-        impuestos: Object.values(taxSel).map((t) => ({
-          tax_id: t.tax_id,
-          incluido: t.incluido,
-          porcentaje: t.porcentaje,
-        })),
+        impuestos: Object.values(taxSel).map((t) => {
+          const catalogMin = taxes.find((x) => x.id === t.tax_id)?.monto_minimo ?? null
+
+          return {
+            tax_id: t.tax_id,
+            incluido: t.incluido,
+            porcentaje: t.porcentaje,
+            ...(catalogMin !== null && catalogMin !== undefined
+              ? { monto_minimo: (t.monto_minimo ?? catalogMin) }
+              : {}),
+          }
+        }),
       }
 
       if (isEdit && budgetId) {
@@ -637,12 +661,20 @@ export default function BudgetCreatePage() {
                     <th>Incluir</th>
                     <th>Nombre</th>
                     <th style={{ width: 180 }}>%</th>
+                    <th style={{ width: 220 }}>Mínimo (U$D)</th>
                   </tr>
                 </thead>
                 <tbody>
                   {taxes.map((t) => {
                     const sel = taxSel[t.id]
                     const included = sel?.incluido ?? false
+                    const hasMin = t.monto_minimo !== null && t.monto_minimo !== undefined
+                    const base = calc.baseImponible
+                    const pct = toNum(sel?.porcentaje ?? t.porcentaje) / 100
+                    const montoPct = base * pct
+
+                    const minVal = hasMin ? toNum(String(sel?.monto_minimo ?? t.monto_minimo)) : 0
+                    const aplicado = hasMin ? Math.max(montoPct, minVal) : montoPct
                     return (
                       <tr key={t.id}>
                         <td>
@@ -660,6 +692,25 @@ export default function BudgetCreatePage() {
                             onChange={(e) => setTaxSel((prev) => ({ ...prev, [t.id]: { ...prev[t.id], porcentaje: e.target.value } }))}
                           />
                           <div className="form-text">Sugerido: {t.porcentaje}%</div>
+                        </td>
+                        <td>
+                          {hasMin ? (
+                            <>
+                              <input
+                                className="form-control form-control-sm"
+                                value={sel?.monto_minimo ?? t.monto_minimo ?? ''}
+                                onChange={(e) =>
+                                  setTaxSel((prev) => ({
+                                    ...prev,
+                                    [t.id]: { ...prev[t.id], monto_minimo: e.target.value },
+                                  }))
+                                }
+                              />
+                              <div className="form-text">Sugerido: {t.monto_minimo}</div>
+                            </>
+                          ) : (
+                            <div className="text-muted">—</div>
+                          )}
                         </td>
                       </tr>
                     )
