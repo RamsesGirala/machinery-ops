@@ -117,6 +117,7 @@ class BudgetListSerializer(serializers.ModelSerializer):
     compra_id = serializers.SerializerMethodField()
     tiene_compra = serializers.SerializerMethodField()
     machine_bases = serializers.SerializerMethodField()
+    cliente = serializers.SerializerMethodField()
 
     class Meta:
         model = Budget
@@ -125,6 +126,7 @@ class BudgetListSerializer(serializers.ModelSerializer):
             "numero",
             "fecha",
             "estado",
+            "cliente",
             "machine_bases",
             "tiene_compra",
             "compra_id",
@@ -148,6 +150,11 @@ class BudgetListSerializer(serializers.ModelSerializer):
         qs = obj.items.select_related("machine_base").all()
         nombres = sorted({it.machine_base.nombre for it in qs})
         return nombres
+
+    def get_cliente(self, obj):
+        if not getattr(obj, "cliente_id", None):
+            return None
+        return {"id": obj.cliente_id, "nombre": obj.cliente.nombre}
 
 
 class BudgetDetailSerializer(serializers.ModelSerializer):

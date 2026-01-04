@@ -154,7 +154,8 @@ export default function BudgetsListPage() {
             <thead>
               <tr>
                 <th>Número</th>
-                <th>Máquinas</th>
+                <th>Cliente</th>
+                <th>Maquinas</th>
                 <th>Fecha</th>
                 <th>Total</th>
                 <th>Estado</th>
@@ -164,7 +165,7 @@ export default function BudgetsListPage() {
             <tbody>
               {items.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-muted">
+                  <td colSpan={7} className="text-muted">
                     Sin datos.
                   </td>
                 </tr>
@@ -172,6 +173,7 @@ export default function BudgetsListPage() {
                 items.map((b) => (
                   <tr key={b.id}>
                     <td>{b.numero}</td>
+                    <td>{b.cliente?.nombre ?? '-'}</td>
                     <td>
                       {b.machine_bases?.length ? (
                         <ul className="mb-0 ps-3">

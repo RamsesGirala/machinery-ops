@@ -63,7 +63,7 @@ export interface Budget {
   fecha: string
   estado: string
   machine_bases?: string[]
-
+  cliente?: { id: number; nombre: string } | null
   tiene_compra?: boolean
   compra_id?: number | null
 
