@@ -61,17 +61,24 @@ export type BudgetTaxIn = {
 export type BudgetLogisticsIn = {
   logistics_leg_id: number
   total: string
-  etapa: EtapaEnum
+}
+
+
+export type BudgetPreTaxChargeIn = {
+  pre_tax_charge_id: number
+  incluido: boolean
+  porcentaje: string
 }
 
 export type BudgetCreatePayload = {
-  numero: string
   fecha: string
-  tipo: TipoEnum
-  items?: BudgetItemIn[]
+  cliente_id?: number | null
+  items: BudgetItemIn[]
+  pretax_charges?: BudgetPreTaxChargeIn[]
   impuestos?: BudgetTaxIn[]
   logisticas?: BudgetLogisticsIn[]
 }
+
 
 export type BudgetUpdatePayload = BudgetCreatePayload & {
   notas?: string

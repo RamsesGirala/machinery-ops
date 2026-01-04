@@ -32,7 +32,9 @@ export default function BudgetDetailPage() {
       <div className="d-flex align-items-start justify-content-between mb-3">
         <div>
           <h2 className="mb-1">Presupuesto</h2>
-          <div className="text-muted">{data ? `${data.numero} · ${data.fecha}` : 'Cargando...'}</div>
+          <div className="text-muted">
+            {data ? `${data.numero} · ${data.fecha}${data.cliente ? ` · ${data.cliente.nombre}` : ''}` : 'Cargando...'}
+          </div>
         </div>
 
         <button className="btn btn-outline-secondary" onClick={() => nav('/budgets')}>
@@ -44,19 +46,31 @@ export default function BudgetDetailPage() {
       {!data ? null : (
         <>
           <div className="row g-3 mb-3">
-            <div className="col-md-4">
+            <div className="col-md-3">
+              <div className="card"><div className="card-body">
+                <div className="text-muted">Base pre-impuestos</div>
+                <div className="fs-4">{formatUSD(data.base_pre_impuestos_snapshot)}</div>
+              </div></div>
+            </div>
+            <div className="col-md-3">
+              <div className="card"><div className="card-body">
+                <div className="text-muted">Costos pre-impuestos</div>
+                <div className="fs-4">{formatUSD(data.total_pretax_charges_snapshot)}</div>
+              </div></div>
+            </div>
+            <div className="col-md-2">
               <div className="card"><div className="card-body">
                 <div className="text-muted">Base imponible</div>
                 <div className="fs-4">{formatUSD(data.base_imponible_snapshot)}</div>
               </div></div>
             </div>
-            <div className="col-md-4">
+            <div className="col-md-2">
               <div className="card"><div className="card-body">
                 <div className="text-muted">Impuestos</div>
                 <div className="fs-4">{formatUSD(data.total_impuestos_snapshot)}</div>
               </div></div>
             </div>
-            <div className="col-md-4">
+            <div className="col-md-2">
               <div className="card"><div className="card-body">
                 <div className="text-muted">Total</div>
                 <div className="fs-4">{formatUSD(data.total_snapshot)}</div>
@@ -99,6 +113,24 @@ export default function BudgetDetailPage() {
                     {l.desde} → {l.hasta} ({l.tipo}, {l.etapa}) — {formatUSD(l.total_snapshot)}
                   </li>
                 ))}
+              </ul>
+            </div>
+          </div>
+          
+          <div className="card mb-3">
+            <div className="card-body">
+              <h5>Costos pre-impuestos</h5>
+              <ul className="mb-0">
+                {data.pretax_charges.length === 0 ? (
+                  <li className="text-muted">Sin costos pre-impuestos aplicados.</li>
+                ) : (
+                  data.pretax_charges.map((p) => (
+                    <li key={p.id}>
+                      {p.pre_tax_charge_nombre} — {p.porcentaje_snapshot}% {' — '}
+                      <b>{formatUSD(p.monto_aplicado_snapshot)}</b>
+                    </li>
+                  ))
+                )}
               </ul>
             </div>
           </div>

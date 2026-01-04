@@ -110,13 +110,31 @@ export interface BudgetLogisticsOut {
   total_snapshot: string
 }
 
+export interface BudgetPreTaxChargeOut {
+  id: number
+  pre_tax_charge: number
+  pre_tax_charge_nombre: string
+  porcentaje_snapshot: string
+  monto_aplicado_snapshot: string
+}
+
 export interface BudgetDetail extends Budget {
+  cliente: { id: number; nombre: string } | null
+
   subtotal_maquinas_snapshot: string
   subtotal_accesorios_snapshot: string
+  subtotal_logistica_hasta_aduana_snapshot: string
+  subtotal_logistica_post_aduana_snapshot: string
+
+  base_pre_impuestos_snapshot: string
+  total_pretax_charges_snapshot: string
+
   items: BudgetItemOut[]
+  pretax_charges: BudgetPreTaxChargeOut[]
   impuestos: BudgetTaxOut[]
   logisticas: BudgetLogisticsOut[]
 }
+
 
 export interface PurchasedUnit {
   id: number

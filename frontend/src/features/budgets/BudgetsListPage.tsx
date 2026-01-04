@@ -164,7 +164,7 @@ export default function BudgetsListPage() {
             <tbody>
               {items.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="text-muted">
+                  <td colSpan={6} className="text-muted">
                     Sin datos.
                   </td>
                 </tr>

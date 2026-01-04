@@ -13,6 +13,7 @@ from machinery.models import (
     Budget,
     BudgetItem,
     BudgetItemAccessory,
+    BudgetPreTaxChargeApplied,
     BudgetTaxApplied,
     BudgetSelectedLogisticsLeg,
     BudgetStatus,
@@ -21,6 +22,8 @@ from machinery.models import (
     Tax,
     LogisticsLeg,
     LogisticsStage,
+    Client,
+    PreTaxCharge
 )
 
 from .repositories import BudgetRepository
@@ -54,11 +57,14 @@ class BudgetService:
     def list_qs(self):
         return (
             self.repo.list_qs()
+            .select_related("cliente")
             .prefetch_related(
                 "items",
                 "items__machine_base",
                 "items__accesorios",
                 "items__accesorios__accessory",
+                "pretax_charges",
+                "pretax_charges__pre_tax_charge",
                 "impuestos",
                 "impuestos__tax",
                 "logisticas",
@@ -135,6 +141,11 @@ class BudgetService:
             )
 
     def _apply_payload_to_budget(self, *, budget: Budget, payload: Dict[str, Any]) -> None:
+        if "cliente_id" in payload:
+            cid = payload.get("cliente_id", None)
+            budget.cliente = Client.objects.get(pk=cid) if cid else None
+            budget.save(update_fields=["cliente", "updated_at"])
+
         subtotal_maquinas = D("0.00")
         subtotal_accesorios = D("0.00")
 
@@ -202,8 +213,53 @@ class BudgetService:
             else:
                 subtotal_log_post += leg_total
 
-        base_imponible = _money(subtotal_maquinas + subtotal_accesorios + subtotal_log_hasta)
+        base_pre_impuestos = _money(subtotal_maquinas + subtotal_accesorios + subtotal_log_hasta)
 
+        # -------------------------
+        # PreTax charges (sobre base_pre_impuestos)
+        # -------------------------
+        total_pretax = D("0.00")
+        pretax: List[Dict[str, Any]] = payload.get("pretax_charges") or []
+
+        if not pretax:
+            pretax = [
+                {"pre_tax_charge_id": p.id, "incluido": True, "porcentaje": str(p.porcentaje)}
+                for p in PreTaxCharge.objects.filter(siempre_incluir=True).order_by("nombre")
+            ]
+
+        for ptx in pretax:
+            p: PreTaxCharge = PreTaxCharge.objects.get(pk=ptx["pre_tax_charge_id"])
+            incluido = bool(ptx.get("incluido", True))
+
+            porcentaje = _d(ptx.get("porcentaje") or p.porcentaje)
+            porc2 = porcentaje.quantize(D("0.01"), rounding=ROUND_HALF_UP)
+            cat2 = p.porcentaje.quantize(D("0.01"), rounding=ROUND_HALF_UP)
+            if porc2 != cat2:
+                p.porcentaje = porc2
+                p.save(update_fields=["porcentaje"])
+
+            monto_pct = _money(base_pre_impuestos * (porcentaje / D("100.00")))
+            monto_aplicado = monto_pct
+
+            BudgetPreTaxChargeApplied.objects.create(
+                budget=budget,
+                pre_tax_charge=p,
+                incluido=incluido,
+                porcentaje_snapshot=porcentaje,
+                monto_aplicado_snapshot=(monto_aplicado if incluido else D("0.00")),
+            )
+
+            if incluido:
+                total_pretax += _money(monto_aplicado)
+
+        total_pretax = _money(total_pretax)
+
+        # ahora sí: base imponible final (para impuestos)
+        base_imponible = _money(base_pre_impuestos + total_pretax)
+
+        # -------------------------
+        # Impuestos (sobre base_imponible)
+        # -------------------------
         total_impuestos = D("0.00")
         impuestos: List[Dict[str, Any]] = payload.get("impuestos") or []
 
@@ -217,7 +273,6 @@ class BudgetService:
             tax: Tax = Tax.objects.get(pk=tx["tax_id"])
             incluido = bool(tx.get("incluido", True))
 
-            # % override (igual que hoy)
             porcentaje = _d(tx.get("porcentaje") or tax.porcentaje)
 
             porc2 = porcentaje.quantize(D("0.01"), rounding=ROUND_HALF_UP)
@@ -226,8 +281,6 @@ class BudgetService:
                 tax.porcentaje = porc2
                 tax.save(update_fields=["porcentaje"])
 
-            # ✅ mínimo override SOLO si el impuesto del catálogo tiene mínimo
-            # si el tax no tiene mínimo, ignoramos cualquier monto_minimo que venga
             monto_minimo = None
             if tax.monto_minimo is not None:
                 override = tx.get("monto_minimo", None)
@@ -236,7 +289,6 @@ class BudgetService:
                 if override is not None:
                     new_min2 = _money(_d(override))
                     old_min2 = _money(tax.monto_minimo) if tax.monto_minimo is not None else None
-
                     if old_min2 is None or new_min2 != old_min2:
                         tax.monto_minimo = new_min2
                         tax.save(update_fields=["monto_minimo"])
@@ -267,6 +319,8 @@ class BudgetService:
         budget.subtotal_accesorios_snapshot = _money(subtotal_accesorios)
         budget.subtotal_logistica_hasta_aduana_snapshot = _money(subtotal_log_hasta)
         budget.subtotal_logistica_post_aduana_snapshot = _money(subtotal_log_post)
+        budget.base_pre_impuestos_snapshot = base_pre_impuestos
+        budget.total_pretax_charges_snapshot = total_pretax
         budget.base_imponible_snapshot = base_imponible
         budget.total_impuestos_snapshot = total_impuestos
         budget.costo_aduana_snapshot = costo_aduana
@@ -277,6 +331,8 @@ class BudgetService:
             "subtotal_accesorios_snapshot",
             "subtotal_logistica_hasta_aduana_snapshot",
             "subtotal_logistica_post_aduana_snapshot",
+            "base_pre_impuestos_snapshot",
+            "total_pretax_charges_snapshot",
             "base_imponible_snapshot",
             "total_impuestos_snapshot",
             "costo_aduana_snapshot",
@@ -314,6 +370,7 @@ class BudgetService:
 
         budget.items.all().delete()
         budget.logisticas.all().delete()
+        budget.pretax_charges.all().delete()
         budget.impuestos.all().delete()
 
         self._apply_payload_to_budget(budget=budget, payload=payload)

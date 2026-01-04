@@ -6,8 +6,10 @@ import { fetchMachines } from '../../api/machinesApi'
 import { fetchAccessories } from '../../api/accessoriesApi'
 import { fetchLogisticsLegs } from '../../api/logisticsLegsApi'
 import { fetchTaxes } from '../../api/taxesApi'
+import { fetchClientsAll } from '../../api/clientsApi'
+import { fetchPreTaxChargesAll } from '../../api/preTaxChargesApi'
 
-import type { MachineBase, Accessory, LogisticsLeg, Tax } from '../../api/types/models'
+import type { MachineBase, Accessory, LogisticsLeg, Tax, Client, PreTaxCharge} from '../../api/types/models'
 import type { BudgetCreatePayload } from '../../api/types/payloads'
 import { formatUSD } from '../../utils/money'
 import ErrorAlert from '../../components/global/ErrorAlert'
@@ -37,6 +39,14 @@ export default function BudgetCreatePage() {
   const [accessories, setAccessories] = useState<Accessory[]>([])
   const [legs, setLegs] = useState<LogisticsLeg[]>([])
   const [taxes, setTaxes] = useState<Tax[]>([])
+  const [clients, setClients] = useState<Client[]>([])
+  const [pretaxCharges, setPreTaxCharges] = useState<PreTaxCharge[]>([])
+
+  const [clienteId, setClienteId] = useState<number | null>(null)
+
+  type PreTaxSel = { pre_tax_charge_id: number; incluido: boolean; porcentaje: string; nombre: string }
+  const [pretaxSel, setPretaxSel] = useState<Record<number, PreTaxSel>>({})
+
 
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -70,17 +80,33 @@ export default function BudgetCreatePage() {
     ;(async () => {
       try {
         setError(null)
-        const [m, a, l, t] = await Promise.all([
+        const [m, a, l, t, cAll, pAll] = await Promise.all([
           fetchMachines({ page: 1, pageSize: 200 }),
           fetchAccessories({ page: 1, pageSize: 500 }),
           fetchLogisticsLegs({ page: 1, pageSize: 200 }),
           fetchTaxes({ page: 1, pageSize: 200 }),
+          fetchClientsAll(),
+          fetchPreTaxChargesAll(),
         ])
 
         setMachines(m.results)
         setAccessories(a.results)
         setLegs(l.results)
         setTaxes(t.results)
+        setClients(cAll)
+        setPreTaxCharges(pAll)
+        
+        // pretax init
+        const pinit: Record<number, PreTaxSel> = {}
+        for (const p of pAll) {
+          pinit[p.id] = {
+            pre_tax_charge_id: p.id,
+            incluido: p.siempre_incluir ? true : false,
+            porcentaje: p.porcentaje,
+            nombre: p.nombre,
+          }
+        }
+        setPretaxSel(pinit)
 
         // Inicializamos taxSel con todos los impuestos: incluido si siempre_incluir, porcentaje editable
         const init: Record<number, TaxSel> = {}
@@ -119,6 +145,7 @@ export default function BudgetCreatePage() {
 
         // fecha
         if (b?.fecha) setFecha(b.fecha)
+        setClienteId(b?.cliente?.id ?? b?.cliente_id ?? null)
 
         // Items: setItems + overrides globales para máquinas/accesorios
         const nextItems: MachineLine[] = (b?.items || []).map((it: any) => ({
@@ -183,6 +210,23 @@ export default function BudgetCreatePage() {
           for (const [k, v] of Object.entries(tsUpdate)) merged[Number(k)] = { ...(merged[Number(k)] ?? v), ...v }
           return merged
         })
+        
+        const psUpdate: Record<number, PreTaxSel> = {}
+        for (const p of b?.pretax_charges || []) {
+          const pid = Number(p.pre_tax_charge ?? p.pre_tax_charge_id)
+          const porcentaje = String(p.porcentaje_snapshot ?? p.porcentaje ?? '')
+          const incluido = Boolean(p.incluido ?? true)
+          const nombre = String(p.nombre ?? (pretaxCharges.find((x) => x.id === pid)?.nombre ?? ''))
+          psUpdate[pid] = { pre_tax_charge_id: pid, incluido, porcentaje, nombre }
+        }
+
+        setPretaxSel((prev) => {
+          const merged = { ...prev }
+          for (const k of Object.keys(merged)) merged[Number(k)] = { ...merged[Number(k)], incluido: false }
+          for (const [k, v] of Object.entries(psUpdate)) merged[Number(k)] = { ...(merged[Number(k)] ?? v), ...v }
+          return merged
+        })
+
       } catch {
         setError('No se pudo cargar el presupuesto para editar.')
       } finally {
@@ -236,7 +280,16 @@ export default function BudgetCreatePage() {
       else logPost += toNum(sel.total)
     }
 
-    const baseImponible = subtotalMaquinas + subtotalAcc + logHasta
+    const basePre = subtotalMaquinas + subtotalAcc + logHasta
+
+    let pretaxTotal = 0
+    for (const p of Object.values(pretaxSel)) {
+      if (!p.incluido) continue
+      const pct = toNum(p.porcentaje) / 100
+      pretaxTotal += basePre * pct
+    }
+
+    const baseImponible = basePre + pretaxTotal
 
     let impuestos = 0
     for (const tx of Object.values(taxSel)) {
@@ -245,7 +298,6 @@ export default function BudgetCreatePage() {
       const pct = toNum(tx.porcentaje) / 100
       const montoPct = baseImponible * pct
 
-      // ✅ mínimo solo si el tax del catálogo tiene mínimo
       const catalogMin = taxes.find((x) => x.id === tx.tax_id)?.monto_minimo ?? null
       let monto = montoPct
 
@@ -258,11 +310,10 @@ export default function BudgetCreatePage() {
       impuestos += monto
     }
 
-
     const total = baseImponible + impuestos + logPost
 
-    return { subtotalMaquinas, subtotalAcc, logHasta, logPost, baseImponible, impuestos, total }
-  }, [items, logSel, taxSel, taxes, machinePriceById, accessoryPriceById, machineById, accessoryById])
+    return { subtotalMaquinas, subtotalAcc, logHasta, logPost, basePre, pretaxTotal, baseImponible, impuestos, total }
+  }, [items, logSel, pretaxSel,taxSel, taxes, machinePriceById, accessoryPriceById, machineById, accessoryById])
 
   function addMachineLine(machineId: number) {
     const m = machineById.get(machineId)
@@ -320,6 +371,7 @@ export default function BudgetCreatePage() {
     try {
       const payload: BudgetCreatePayload = {
         fecha,
+        cliente_id: clienteId,
         items: items.map((it) => ({
           machine_base_id: it.machine_base_id,
           cantidad: it.cantidad,
@@ -333,6 +385,11 @@ export default function BudgetCreatePage() {
         logisticas: Object.values(logSel).map((l) => ({
           logistics_leg_id: l.logistics_leg_id,
           total: l.total,
+        })),
+        pretax_charges: Object.values(pretaxSel).map((p) => ({
+          pre_tax_charge_id: p.pre_tax_charge_id,
+          incluido: p.incluido,
+          porcentaje: p.porcentaje,
         })),
         impuestos: Object.values(taxSel).map((t) => {
           const catalogMin = taxes.find((x) => x.id === t.tax_id)?.monto_minimo ?? null
@@ -384,7 +441,18 @@ export default function BudgetCreatePage() {
             <label className="form-label">Fecha</label>
             <input type="date" className="form-control" value={fecha} onChange={(e) => setFecha(e.target.value)} />
           </div>
-          {/* ❌ Número eliminado */}
+
+          <div className="col-md-5">
+            <label className="form-label">Cliente (opcional)</label>
+            <select className="form-select" value={clienteId ?? ''} onChange={(e) => setClienteId(e.target.value ? Number(e.target.value) : null)}>
+              <option value="">— Sin cliente —</option>
+              {clients.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -645,6 +713,64 @@ export default function BudgetCreatePage() {
         </div>
       </div>
 
+      {/* PreTax Charges */}
+      <div className="card mb-3">
+        <div className="card-body">
+          <h5>Costos pre-impuestos</h5>
+          <div className="text-muted small mb-2">Se calculan sobre (máquinas + accesorios + logística HASTA_ADUANA) y se suman a la base imponible.</div>
+
+          {pretaxCharges.length === 0 ? (
+            <div className="text-muted">Sin costos pre-impuestos cargados.</div>
+          ) : (
+            <div className="table-responsive">
+              <table className="table align-middle">
+                <thead>
+                  <tr>
+                    <th>Incluir</th>
+                    <th>Nombre</th>
+                    <th style={{ width: 180 }}>%</th>
+                    <th style={{ width: 220 }}>Aplicado (U$D)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pretaxCharges.map((p) => {
+                    const sel = pretaxSel[p.id]
+                    const included = sel?.incluido ?? false
+                    const base = calc.basePre
+                    const pct = toNum(sel?.porcentaje ?? p.porcentaje) / 100
+                    const aplicado = base * pct
+
+                    return (
+                      <tr key={p.id}>
+                        <td>
+                          <input
+                            type="checkbox"
+                            checked={included}
+                            onChange={(e) => setPretaxSel((prev) => ({ ...prev, [p.id]: { ...prev[p.id], incluido: e.target.checked } }))}
+                          />
+                        </td>
+                        <td>{p.nombre}</td>
+                        <td>
+                          <input
+                            className="form-control form-control-sm"
+                            value={sel?.porcentaje ?? p.porcentaje}
+                            onChange={(e) => setPretaxSel((prev) => ({ ...prev, [p.id]: { ...prev[p.id], porcentaje: e.target.value } }))}
+                          />
+                          <div className="form-text">Sugerido: {p.porcentaje}%</div>
+                        </td>
+                        <td>
+                          <div className="fw-semibold">{included ? formatUSD(aplicado) : <span className="text-muted">—</span>}</div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Taxes */}
       <div className="card mb-3">
         <div className="card-body">
@@ -744,18 +870,27 @@ export default function BudgetCreatePage() {
               <div className="fs-5">{formatUSD(calc.logPost)}</div>
             </div>
 
-            <div className="col-md-4 mt-3">
+            <div className="col-md-3 mt-3">
+              <div className="text-muted">Base pre-impuestos</div>
+              <div className="fs-4">{formatUSD(calc.basePre)}</div>
+            </div>
+            <div className="col-md-3 mt-3">
+              <div className="text-muted">Costos pre-impuestos</div>
+              <div className="fs-4">{formatUSD(calc.pretaxTotal)}</div>
+            </div>
+            <div className="col-md-2 mt-3">
               <div className="text-muted">Base imponible</div>
               <div className="fs-4">{formatUSD(calc.baseImponible)}</div>
             </div>
-            <div className="col-md-4 mt-3">
+            <div className="col-md-2 mt-3">
               <div className="text-muted">Impuestos</div>
               <div className="fs-4">{formatUSD(calc.impuestos)}</div>
             </div>
-            <div className="col-md-4 mt-3">
+            <div className="col-md-2 mt-3">
               <div className="text-muted">Total</div>
               <div className="fs-4">{formatUSD(calc.total)}</div>
             </div>
+
           </div>
 
           <div className="mt-3 d-flex justify-content-end">

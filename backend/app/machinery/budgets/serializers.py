@@ -7,6 +7,7 @@ from machinery.models import (
     BudgetItem,
     BudgetItemAccessory,
     BudgetTaxApplied,
+    BudgetPreTaxChargeApplied,
     BudgetSelectedLogisticsLeg,
 )
 
@@ -23,6 +24,10 @@ class BudgetItemInSerializer(serializers.Serializer):
     machine_total = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
     accesorios = BudgetItemAccessoryInSerializer(many=True, required=False)
 
+class BudgetPreTaxChargeInSerializer(serializers.Serializer):
+    pre_tax_charge_id = serializers.IntegerField()
+    incluido = serializers.BooleanField(required=False, default=True)
+    porcentaje = serializers.DecimalField(max_digits=6, decimal_places=2, required=False)
 
 class BudgetTaxInSerializer(serializers.Serializer):
     tax_id = serializers.IntegerField()
@@ -37,7 +42,9 @@ class BudgetLogisticsInSerializer(serializers.Serializer):
 
 class BudgetCreateSerializer(serializers.Serializer):
     fecha = serializers.DateField(required=False)
+    cliente_id = serializers.IntegerField(required=False, allow_null=True)
     items = BudgetItemInSerializer(many=True)
+    pretax_charges = BudgetPreTaxChargeInSerializer(many=True, required=False)
     impuestos = BudgetTaxInSerializer(many=True, required=False)
     logisticas = BudgetLogisticsInSerializer(many=True, required=False)
 
@@ -80,6 +87,12 @@ class BudgetItemOutSerializer(serializers.ModelSerializer):
         qs = obj.accesorios.select_related("accessory").order_by("accessory__nombre", "id")
         return BudgetItemAccessoryOutSerializer(qs, many=True).data
 
+class BudgetPreTaxChargeOutSerializer(serializers.ModelSerializer):
+    pre_tax_charge_nombre = serializers.CharField(source="pre_tax_charge.nombre", read_only=True)
+
+    class Meta:
+        model = BudgetPreTaxChargeApplied
+        fields = ["id", "pre_tax_charge", "pre_tax_charge_nombre", "porcentaje_snapshot", "monto_aplicado_snapshot"]
 
 class BudgetTaxOutSerializer(serializers.ModelSerializer):
     tax_nombre = serializers.CharField(source="tax.nombre", read_only=True)
@@ -139,8 +152,10 @@ class BudgetListSerializer(serializers.ModelSerializer):
 
 class BudgetDetailSerializer(serializers.ModelSerializer):
     items = serializers.SerializerMethodField()
+    pretax_charges = serializers.SerializerMethodField()
     impuestos = serializers.SerializerMethodField()
     logisticas = serializers.SerializerMethodField()
+    cliente = serializers.SerializerMethodField()
 
     class Meta:
         model = Budget
@@ -149,15 +164,19 @@ class BudgetDetailSerializer(serializers.ModelSerializer):
             "numero",
             "fecha",
             "estado",
+            "cliente",
             "subtotal_maquinas_snapshot",
             "subtotal_accesorios_snapshot",
             "subtotal_logistica_hasta_aduana_snapshot",
             "subtotal_logistica_post_aduana_snapshot",
+            "base_pre_impuestos_snapshot",
+            "total_pretax_charges_snapshot",
             "base_imponible_snapshot",
             "total_impuestos_snapshot",
             "costo_aduana_snapshot",
             "total_snapshot",
             "items",
+            "pretax_charges",
             "impuestos",
             "logisticas",
             "created_at",
@@ -168,6 +187,16 @@ class BudgetDetailSerializer(serializers.ModelSerializer):
         # ✅ máquinas ordenadas alfabéticamente
         qs = obj.items.select_related("machine_base").order_by("machine_base__nombre", "id")
         return BudgetItemOutSerializer(qs, many=True).data
+
+    def get_cliente(self, obj):
+        if not obj.cliente_id:
+            return None
+        return {"id": obj.cliente_id, "nombre": obj.cliente.nombre}
+
+    def get_pretax_charges(self, obj):
+        qs = obj.pretax_charges.select_related("pre_tax_charge").filter(incluido=True).order_by(
+            "pre_tax_charge__nombre", "id")
+        return BudgetPreTaxChargeOutSerializer(qs, many=True).data
 
     def get_impuestos(self, obj):
         # ✅ solo los impuestos efectivamente incluidos + orden alfabético
