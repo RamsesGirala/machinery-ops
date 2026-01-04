@@ -46,6 +46,7 @@ class Tax(TimeStampedModel):
         blank=True,
     )
     siempre_incluir = models.BooleanField(default=False)
+    se_imprime_en_presupuesto = models.BooleanField(default=False)
 
     class Meta:
         db_table = "tax"
@@ -53,6 +54,37 @@ class Tax(TimeStampedModel):
 
     def __str__(self) -> str:
         return f"{self.nombre} ({self.porcentaje}%)"
+
+class PreTaxCharge(TimeStampedModel):
+    nombre = models.CharField(max_length=200, unique=True)
+    porcentaje = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.00")), MaxValueValidator(Decimal("100.00"))],
+    )
+    siempre_incluir = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = "pre_tax_charge"
+        ordering = ["nombre"]
+
+    def __str__(self) -> str:
+        return f"{self.nombre} ({self.porcentaje}%)"
+
+class Client(TimeStampedModel):
+    nombre = models.CharField(max_length=200)
+    telefono = models.CharField(max_length=50, null=True, blank=True)
+    email = models.EmailField(null=True, blank=True)
+
+    class Meta:
+        db_table = "client"
+        ordering = ["nombre"]
+        indexes = [
+            models.Index(fields=["nombre"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.nombre}"
 
 
 class LogisticsType(models.TextChoices):

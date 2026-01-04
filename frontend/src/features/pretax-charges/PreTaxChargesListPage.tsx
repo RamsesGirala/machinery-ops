@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
-import type { Tax } from '../../api/types'
-import { fetchTaxes, eliminarTax } from '../../api/taxesApi'
+import type { PreTaxCharge } from '../../api/types'
+import { fetchPreTaxCharges, eliminarPreTaxCharge } from '../../api/preTaxChargesApi'
 
 import PaginationBar from '../../components/global/PaginationBar'
 import FlashAlert from '../../components/global/FlashAlert'
@@ -10,15 +10,14 @@ import ErrorAlert from '../../components/global/ErrorAlert'
 import ConfirmModal from '../../components/global/ConfirmModal'
 import { useFlashFromLocation } from '../../hooks/useFlashFromLocation'
 import { drfErrorToMessage } from '../../utils/drfErrorToMessage'
-import { formatUSD } from '../../utils/money'
 
 const PAGE_SIZES = [10, 20, 50]
 
-const TaxesListPage: React.FC = () => {
+const PreTaxChargesListPage: React.FC = () => {
   const navigate = useNavigate()
   const { flash, clearFlash } = useFlashFromLocation()
 
-  const [items, setItems] = useState<Tax[]>([])
+  const [items, setItems] = useState<PreTaxCharge[]>([])
   const [count, setCount] = useState(0)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
@@ -33,12 +32,12 @@ const TaxesListPage: React.FC = () => {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetchTaxes({ page, pageSize })
+      const res = await fetchPreTaxCharges({ page, pageSize })
       setItems(res.results)
       setCount(res.count)
       if (page > pages) setPage(pages)
     } catch (e: any) {
-      setError(drfErrorToMessage(e, 'No se pudieron cargar los taxes.'))
+      setError(drfErrorToMessage(e, 'No se pudieron cargar los pretax charges.'))
     } finally {
       setLoading(false)
     }
@@ -54,8 +53,8 @@ const TaxesListPage: React.FC = () => {
     setLoading(true)
     setError(null)
     try {
-      await eliminarTax(id)
-      navigate('/taxes', { state: { flash: { type: 'success', message: 'Tax eliminado.' } } })
+      await eliminarPreTaxCharge(id)
+      navigate('/pretax-charges', { state: { flash: { type: 'success', message: 'PreTaxCharge eliminado.' } } })
       await load()
     } catch (e: any) {
       setError(drfErrorToMessage(e, 'No se pudo eliminar.'))
@@ -68,10 +67,10 @@ const TaxesListPage: React.FC = () => {
     <div>
       <div className="d-flex justify-content-between align-items-start mb-3">
         <div>
-          <h2 className="mb-1">Taxes</h2>
+          <h2 className="mb-1">PreTax Charges</h2>
         </div>
 
-        <Link to="/taxes/nuevo" className="btn btn-primary rounded-pill">
+        <Link to="/pretax-charges/nuevo" className="btn btn-primary rounded-pill">
           + Nuevo
         </Link>
       </div>
@@ -85,22 +84,20 @@ const TaxesListPage: React.FC = () => {
             <tr>
               <th>Nombre</th>
               <th>Porcentaje</th>
-              <th>Minimo</th>
               <th>Siempre incluir</th>
-              <th>Imprime</th>
               <th style={{ width: 220 }} className="text-end">Acciones</th>
             </tr>
           </thead>
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={6} className="text-muted">Cargando...</td>
+                <td colSpan={4} className="text-muted">Cargando...</td>
               </tr>
             )}
 
             {!loading && items.length === 0 && (
               <tr>
-                <td colSpan={6} className="text-muted">Sin datos.</td>
+                <td colSpan={4} className="text-muted">Sin datos.</td>
               </tr>
             )}
 
@@ -109,11 +106,9 @@ const TaxesListPage: React.FC = () => {
                 <tr key={it.id}>
                   <td className="fw-semibold">{it.nombre}</td>
                   <td>{it.porcentaje}%</td>
-                  <td>{(it.monto_minimo === null) ? '-' : formatUSD(it.monto_minimo)}</td>
                   <td>{it.siempre_incluir ? 'Sí' : 'No'}</td>
-                  <td>{it.se_imprime_en_presupuesto  ? 'Sí' : 'No'}</td>
                   <td className="text-end">
-                    <Link to={`/taxes/${it.id}/editar`} className="btn btn-sm btn-outline-secondary rounded-pill me-2">
+                    <Link to={`/pretax-charges/${it.id}/editar`} className="btn btn-sm btn-outline-secondary rounded-pill me-2">
                       Editar
                     </Link>
                     <button className="btn btn-sm btn-outline-danger rounded-pill" onClick={() => setConfirmId(it.id)}>
@@ -140,7 +135,7 @@ const TaxesListPage: React.FC = () => {
 
       <ConfirmModal
         show={confirmId !== null}
-        title="Eliminar tax"
+        title="Eliminar PreTaxCharge"
         message="¿Seguro que querés eliminar este registro?"
         confirmText="Eliminar"
         onCancel={() => setConfirmId(null)}
@@ -150,4 +145,4 @@ const TaxesListPage: React.FC = () => {
   )
 }
 
-export default TaxesListPage
+export default PreTaxChargesListPage

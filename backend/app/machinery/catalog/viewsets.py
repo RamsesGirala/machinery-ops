@@ -10,18 +10,24 @@ from .repositories import (
     AccessoryRepository,
     TaxRepository,
     LogisticsLegRepository,
+    ClientRepository,
+    PreTaxChargeRepository
 )
 from .services import (
     MachineBaseService,
     AccessoryService,
     TaxService,
     LogisticsLegService,
+    ClientService,
+    PreTaxChargeService
 )
 from .serializers import (
     MachineBaseSerializer,
     AccessorySerializer,
     TaxSerializer,
     LogisticsLegSerializer,
+    ClientSerializer,
+    PreTaxChargeSerializer
 )
 
 
@@ -54,7 +60,6 @@ class BaseCatalogViewSet(
         serializer = self.get_serializer(qs, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-
 class MachineBaseViewSet(BaseCatalogViewSet):
     serializer_class = MachineBaseSerializer
 
@@ -75,7 +80,6 @@ class MachineBaseViewSet(BaseCatalogViewSet):
 
     def perform_destroy(self, instance):
         self.service.delete(instance.pk)
-
 
 class AccessoryViewSet(BaseCatalogViewSet):
     serializer_class = AccessorySerializer
@@ -98,7 +102,6 @@ class AccessoryViewSet(BaseCatalogViewSet):
     def perform_destroy(self, instance):
         self.service.delete(instance.pk)
 
-
 class TaxViewSet(BaseCatalogViewSet):
     serializer_class = TaxSerializer
 
@@ -120,7 +123,6 @@ class TaxViewSet(BaseCatalogViewSet):
     def perform_destroy(self, instance):
         self.service.delete(instance.pk)
 
-
 class LogisticsLegViewSet(BaseCatalogViewSet):
     serializer_class = LogisticsLegSerializer
 
@@ -130,6 +132,48 @@ class LogisticsLegViewSet(BaseCatalogViewSet):
 
     def get_queryset(self):
         return self.service.list_qs().order_by("etapa", "desde", "hasta", "tipo")
+
+    def perform_create(self, serializer):
+        obj = self.service.create(serializer.validated_data)
+        serializer.instance = obj
+
+    def perform_update(self, serializer):
+        obj = self.service.update(self.get_object().pk, serializer.validated_data)
+        serializer.instance = obj
+
+    def perform_destroy(self, instance):
+        self.service.delete(instance.pk)
+
+class ClientViewSet(BaseCatalogViewSet):
+    serializer_class = ClientSerializer
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.service = ClientService(repo=ClientRepository())
+
+    def get_queryset(self):
+        return self.service.list_qs().order_by("nombre")
+
+    def perform_create(self, serializer):
+        obj = self.service.create(serializer.validated_data)
+        serializer.instance = obj
+
+    def perform_update(self, serializer):
+        obj = self.service.update(self.get_object().pk, serializer.validated_data)
+        serializer.instance = obj
+
+    def perform_destroy(self, instance):
+        self.service.delete(instance.pk)
+
+class PreTaxChargeViewSet(BaseCatalogViewSet):
+    serializer_class = PreTaxChargeSerializer
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.service = PreTaxChargeService(repo=PreTaxChargeRepository())
+
+    def get_queryset(self):
+        return self.service.list_qs().order_by("nombre")
 
     def perform_create(self, serializer):
         obj = self.service.create(serializer.validated_data)

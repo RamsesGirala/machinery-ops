@@ -31,10 +31,28 @@ export interface Tax {
   porcentaje: string
   monto_minimo: string | null
   siempre_incluir: boolean
+  se_imprime_en_presupuesto: boolean
   created_at: string
   updated_at: string
 }
 
+export interface Client {
+  id: number
+  nombre: string
+  telefono: string | null
+  email: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface PreTaxCharge {
+  id: number
+  nombre: string
+  porcentaje: string
+  siempre_incluir: boolean
+  created_at: string
+  updated_at: string
+}
 
 export type EtapaEnum = 'PRE' | 'POST'
 export type TipoEnum = 'VENTA' | 'ALQUILER'

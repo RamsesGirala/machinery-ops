@@ -5,7 +5,7 @@ from typing import Type, TypeVar
 
 from django.db import models
 
-from machinery.models import MachineBase, Accessory, Tax, LogisticsLeg
+from machinery.models import MachineBase, Accessory, Tax, LogisticsLeg, Client, PreTaxCharge
 
 ModelT = TypeVar("ModelT", bound=models.Model)
 
@@ -31,22 +31,26 @@ class BaseRepository:
     def delete(self, instance: ModelT) -> None:
         instance.delete()
 
-
 class MachineBaseRepository(BaseRepository):
     def __init__(self) -> None:
         super().__init__(model=MachineBase)
-
 
 class AccessoryRepository(BaseRepository):
     def __init__(self) -> None:
         super().__init__(model=Accessory)
 
-
 class TaxRepository(BaseRepository):
     def __init__(self) -> None:
         super().__init__(model=Tax)
 
-
 class LogisticsLegRepository(BaseRepository):
     def __init__(self) -> None:
         super().__init__(model=LogisticsLeg)
+
+class ClientRepository(BaseRepository):
+    def __init__(self) -> None:
+        super().__init__(model=Client)
+
+class PreTaxChargeRepository(BaseRepository):
+    def __init__(self) -> None:
+        super().__init__(model=PreTaxCharge)

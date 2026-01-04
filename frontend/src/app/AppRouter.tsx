@@ -11,6 +11,8 @@ import { taxesRoutes } from './routes/taxesRoutes'
 import { budgetsRoutes } from './routes/budgetsRoutes'
 import { unitsRoutes } from './routes/unitsRoutes'
 import { reportsRoutes } from './routes/reportsRoutes'
+import { clientsRoutes } from './routes/clientsRoutes'
+import { pretaxChargesRoutes } from './routes/pretaxChargesRoutes'
 
 export default function AppRouter() {
   return (
@@ -21,6 +23,8 @@ export default function AppRouter() {
         {accessoriesRoutes}
         {logisticsLegsRoutes}
         {taxesRoutes}
+        {clientsRoutes}
+        {pretaxChargesRoutes}
         {budgetsRoutes}
         {unitsRoutes}
         {reportsRoutes}

@@ -25,8 +25,24 @@ export type TaxCreatePayload = {
   porcentaje: string
   monto_minimo?: string | null
   siempre_incluir: boolean
+  se_imprime_en_presupuesto: boolean
 }
 export type TaxUpdatePayload = TaxCreatePayload
+
+export type ClientCreatePayload = {
+  nombre: string
+  telefono?: string | null
+  email?: string | null
+}
+export type ClientUpdatePayload = ClientCreatePayload
+
+export type PreTaxChargeCreatePayload = {
+  nombre: string
+  porcentaje: string
+  siempre_incluir: boolean
+}
+export type PreTaxChargeUpdatePayload = PreTaxChargeCreatePayload
+
 
 export type BudgetItemIn = {
   machine_base_id: number

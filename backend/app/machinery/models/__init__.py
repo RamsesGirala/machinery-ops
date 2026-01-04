@@ -7,12 +7,15 @@ from .catalog import (
     LogisticsLeg,
     LogisticsType,
     LogisticsStage,
+    Client,
+    PreTaxCharge
 )
 from .budget import (
     Budget,
     BudgetItem,
     BudgetItemAccessory,
     BudgetTaxApplied,
+    BudgetPreTaxChargeApplied,
     BudgetSelectedLogisticsLeg,
     BudgetStatus,
 )
@@ -24,7 +27,10 @@ from .purchase import (
 from .revenue import (
     RevenueEvent,
     RevenueEventUnit,
+    RevenuePayment,
     RevenueType,
+    RentalTipo,
+    PaymentMethod
 )
 
 __all__ = [
@@ -33,6 +39,8 @@ __all__ = [
     "MachineBase",
     "Accessory",
     "Tax",
+    "Client",
+    "PreTaxCharge",
     "LogisticsLeg",
     "LogisticsType",
     "LogisticsStage",
@@ -40,6 +48,7 @@ __all__ = [
     "BudgetItem",
     "BudgetItemAccessory",
     "BudgetTaxApplied",
+    "BudgetPreTaxChargeApplied",
     "BudgetSelectedLogisticsLeg",
     "BudgetStatus",
     "Purchase",
@@ -47,5 +56,8 @@ __all__ = [
     "UnitStatus",
     "RevenueEvent",
     "RevenueEventUnit",
+    "RevenuePayment",
     "RevenueType",
+    "RentalTipo",
+    "PaymentMethod"
 ]

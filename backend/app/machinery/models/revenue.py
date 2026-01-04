@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+from decimal import Decimal
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models import Q
 
 from .base import TimeStampedModel, USD_VALIDATOR
+from .catalog import Client
 from .purchase import PurchasedUnit
 
 
@@ -12,82 +15,93 @@ class RevenueType(models.TextChoices):
     ALQUILER = "ALQUILER", "Alquiler"
 
 
+class RentalTipo(models.TextChoices):
+    MENSUAL = "MENSUAL", "Mensual"
+    SEMANAL = "SEMANAL", "Semanal"
+    DIARIO = "DIARIO", "Diario"
+
+
+class PaymentMethod(models.TextChoices):
+    TRANSFERENCIA = "TRANSFERENCIA", "Transferencia"
+    TARJETA_CREDITO = "TARJETA_CREDITO", "Tarjeta crédito"
+    CHEQUE = "CHEQUE", "Cheque"
+
+
 class RevenueEvent(TimeStampedModel):
     """
-    Evento de ingresos.
-
-    - VENTA:
-        - fecha: fecha exacta de venta (YYYY-MM-DD)
-        - monto_total: total de la venta
-        - monto_mensual: NULL
-        - fechas de retorno: NULL
-
-    - ALQUILER:
-        - fecha: se guarda como 1er día del mes/año de inicio (YYYY-MM-01). El front opera por Mes/Año.
-        - fecha_retorno_estimada: se guarda como 1er día del mes/año estimado (YYYY-MM-01)
-        - fecha_retorno_real: se guarda como 1er día del mes/año real (YYYY-MM-01) o NULL si sigue activo
-        - monto_mensual: monto mensual ingresado desde el front
-        - monto_total: total calculado en base a meses * monto_mensual (al crear y al finalizar)
+    Evento comercial (venta o alquiler). El flujo de caja real se registra en RevenuePayment.
     """
 
     tipo = models.CharField(max_length=10, choices=RevenueType.choices)
 
-    # Para VENTA: fecha exacta.
-    # Para ALQUILER: usamos día 01 (YYYY-MM-01) para representar Mes/Año (el front trabaja por Mes/Año).
-    fecha = models.DateField()
+    cliente = models.ForeignKey(Client, on_delete=models.PROTECT, related_name="revenue_events")
 
-    # De momento NO mandamos clientes desde el front (pero lo dejamos por si lo activás luego).
-    cliente_texto = models.CharField(max_length=200, blank=True, default="")
+    # Venta: fecha de operación. (Pagos pueden ser 1..N via RevenuePayment)
+    fecha_operacion = models.DateField(null=True, blank=True)
 
-    monto_total = models.DecimalField(max_digits=14, decimal_places=2, validators=[USD_VALIDATOR])
+    # Alquiler: fechas reales (para mensual/semanal/diario)
+    rental_tipo = models.CharField(max_length=10, choices=RentalTipo.choices, null=True, blank=True)
+    rental_inicio = models.DateField(null=True, blank=True)
+    rental_fin_estimado = models.DateField(null=True, blank=True)
+    rental_fin_real = models.DateField(null=True, blank=True)
 
-    # Solo para alquiler: monto mensual
-    monto_mensual = models.DecimalField(max_digits=14, decimal_places=2, validators=[USD_VALIDATOR], null=True, blank=True)
+    monto_unitario = models.DecimalField(
+        max_digits=14, decimal_places=2, validators=[USD_VALIDATOR], null=True, blank=True
+    )
 
-    # Solo para alquiler (se guardan como YYYY-MM-01)
-    fecha_retorno_estimada = models.DateField(null=True, blank=True)
-    fecha_retorno_real = models.DateField(null=True, blank=True)
+    # Total final del evento (venta o alquiler). Si el alquiler todavía no está “cerrado”, igual podés guardar el estimado acá.
+    monto_total_final = models.DecimalField(max_digits=14, decimal_places=2, validators=[USD_VALIDATOR])
 
     notas = models.TextField(blank=True, default="")
 
     class Meta:
         db_table = "revenue_event"
-        ordering = ["-fecha", "-created_at"]
+        ordering = ["-created_at"]
         indexes = [
             models.Index(fields=["tipo"]),
-            models.Index(fields=["fecha"]),
+            models.Index(fields=["fecha_operacion"]),
+            models.Index(fields=["cliente"]),
         ]
         constraints = [
-            # Si es VENTA => retorno_estimada/real y monto_mensual deben ser NULL
+            # VENTA => requiere fecha_operacion y NO permite campos de alquiler
             models.CheckConstraint(
                 check=(
                     Q(tipo=RevenueType.ALQUILER)
                     | (
                         Q(tipo=RevenueType.VENTA)
-                        & Q(fecha_retorno_estimada__isnull=True)
-                        & Q(fecha_retorno_real__isnull=True)
-                        & Q(monto_mensual__isnull=True)
+                        & Q(fecha_operacion__isnull=False)
+                        & Q(rental_tipo__isnull=True)
+                        & Q(rental_inicio__isnull=True)
+                        & Q(rental_fin_estimado__isnull=True)
+                        & Q(rental_fin_real__isnull=True)
+                        & Q(monto_unitario__isnull=True)
                     )
                 ),
-                name="ck_revenue_return_dates_only_for_rental",
+                name="ck_revenue_event_sale_fields",
             ),
-            # Si es ALQUILER => monto_mensual y retorno_estimada deben existir
+            # ALQUILER => requiere rental_tipo + fechas + monto_unitario y NO requiere fecha_operacion
             models.CheckConstraint(
                 check=(
                     Q(tipo=RevenueType.VENTA)
-                    | (Q(tipo=RevenueType.ALQUILER) & Q(monto_mensual__isnull=False) & Q(fecha_retorno_estimada__isnull=False))
+                    | (
+                        Q(tipo=RevenueType.ALQUILER)
+                        & Q(rental_tipo__isnull=False)
+                        & Q(rental_inicio__isnull=False)
+                        & Q(rental_fin_estimado__isnull=False)
+                        & Q(monto_unitario__isnull=False)
+                    )
                 ),
-                name="ck_revenue_rental_requires_monthly_and_estimated_return",
+                name="ck_revenue_event_rental_requires_fields",
             ),
-            # Si hay fecha_retorno_real, debe ser >= fecha
+            # Si hay fin real, debe ser >= inicio
             models.CheckConstraint(
-                check=Q(fecha_retorno_real__isnull=True) | Q(fecha_retorno_real__gte=models.F("fecha")),
-                name="ck_revenue_return_real_gte_start",
+                check=Q(rental_fin_real__isnull=True) | Q(rental_fin_real__gte=models.F("rental_inicio")),
+                name="ck_revenue_rental_fin_real_gte_inicio",
             ),
         ]
 
     def __str__(self) -> str:
-        return f"{self.tipo} {self.fecha} (${self.monto_total})"
+        return f"{self.tipo} (${self.monto_total_final})"
 
 
 class RevenueEventUnit(TimeStampedModel):
@@ -107,3 +121,45 @@ class RevenueEventUnit(TimeStampedModel):
 
     def __str__(self) -> str:
         return f"{self.revenue_event_id} -> {self.purchased_unit_id}"
+
+
+class RevenuePayment(TimeStampedModel):
+    revenue_event = models.ForeignKey(RevenueEvent, on_delete=models.CASCADE, related_name="payments")
+
+    monto = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        validators=[USD_VALIDATOR, MinValueValidator(Decimal("0.01"))],
+    )
+
+    metodo_pago = models.CharField(max_length=30, choices=PaymentMethod.choices)
+
+    # Para “ingresos esperados”
+    fecha_prevista = models.DateField()
+
+    # Para “ingresos cobrados”
+    cobrado = models.BooleanField(default=False)
+    fecha_cobro_real = models.DateField(null=True, blank=True)
+
+    descripcion = models.CharField(max_length=255, null=True, blank=True)
+
+    class Meta:
+        db_table = "revenue_payment"
+        ordering = ["fecha_prevista", "id"]
+        indexes = [
+            models.Index(fields=["fecha_prevista"]),
+            models.Index(fields=["cobrado"]),
+            models.Index(fields=["fecha_cobro_real"]),
+            models.Index(fields=["metodo_pago"]),
+            models.Index(fields=["revenue_event"]),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                check=(Q(cobrado=False) & Q(fecha_cobro_real__isnull=True))
+                | (Q(cobrado=True) & Q(fecha_cobro_real__isnull=False)),
+                name="ck_revenue_payment_cobrado_fecha_real_consistency",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.revenue_event_id} {self.fecha_prevista} ${self.monto} ({'cobrado' if self.cobrado else 'pendiente'})"

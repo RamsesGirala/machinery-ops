@@ -3,10 +3,10 @@ import { useNavigate, useParams } from 'react-router-dom'
 
 import ErrorAlert from '../../components/global/ErrorAlert'
 import { drfErrorToMessage } from '../../utils/drfErrorToMessage'
-import { crearTax, editarTax, fetchTax } from '../../api/taxesApi'
-import type { TaxCreatePayload, TaxUpdatePayload } from '../../api/types'
+import { crearPreTaxCharge, editarPreTaxCharge, fetchPreTaxCharge } from '../../api/preTaxChargesApi'
+import type { PreTaxChargeCreatePayload, PreTaxChargeUpdatePayload } from '../../api/types'
 
-const TaxFormPage: React.FC = () => {
+const PreTaxChargeFormPage: React.FC = () => {
   const { id } = useParams()
   const isEdit = Boolean(id)
   const navigate = useNavigate()
@@ -14,12 +14,10 @@ const TaxFormPage: React.FC = () => {
   const [nombre, setNombre] = useState('')
   const [porcentaje, setPorcentaje] = useState('0')
   const [siempreIncluir, setSiempreIncluir] = useState(false)
-  const [seImprime, setSeImprime] = useState(false)
-  const [montoMinimo, setMontoMinimo] = useState<string>('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const title = useMemo(() => (isEdit ? 'Editar Tax' : 'Nuevo Tax'), [isEdit])
+  const title = useMemo(() => (isEdit ? 'Editar PreTaxCharge' : 'Nuevo PreTaxCharge'), [isEdit])
 
   useEffect(() => {
     const load = async () => {
@@ -27,14 +25,12 @@ const TaxFormPage: React.FC = () => {
       setLoading(true)
       setError(null)
       try {
-        const data = await fetchTax(Number(id))
+        const data = await fetchPreTaxCharge(Number(id))
         setNombre(data.nombre)
         setPorcentaje(data.porcentaje)
-        setMontoMinimo(data.monto_minimo ?? '')
         setSiempreIncluir(Boolean(data.siempre_incluir))
-        setSeImprime(Boolean(data.se_imprime_en_presupuesto))
       } catch (e: any) {
-        setError(drfErrorToMessage(e, 'No se pudo cargar el tax.'))
+        setError(drfErrorToMessage(e, 'No se pudo cargar el pretax charge.'))
       } finally {
         setLoading(false)
       }
@@ -48,26 +44,16 @@ const TaxFormPage: React.FC = () => {
     setError(null)
 
     try {
+      const payloadBase = { nombre, porcentaje, siempre_incluir: siempreIncluir }
+
       if (isEdit) {
-        const payload: TaxUpdatePayload = {
-          nombre,
-          porcentaje,
-          monto_minimo: montoMinimo.trim() ? montoMinimo : null,
-          siempre_incluir: siempreIncluir,
-          se_imprime_en_presupuesto: seImprime
-        }
-        await editarTax(Number(id), payload)
-        navigate('/taxes', { state: { flash: { type: 'success', message: 'Tax actualizado.' } } })
+        const payload: PreTaxChargeUpdatePayload = payloadBase
+        await editarPreTaxCharge(Number(id), payload)
+        navigate('/pretax-charges', { state: { flash: { type: 'success', message: 'PreTaxCharge actualizado.' } } })
       } else {
-        const payload: TaxCreatePayload = {
-          nombre,
-          porcentaje,
-          monto_minimo: montoMinimo.trim() ? montoMinimo : null,
-          siempre_incluir: siempreIncluir,
-          se_imprime_en_presupuesto: seImprime
-        }
-        await crearTax(payload)
-        navigate('/taxes', { state: { flash: { type: 'success', message: 'Tax creado.' } } })
+        const payload: PreTaxChargeCreatePayload = payloadBase
+        await crearPreTaxCharge(payload)
+        navigate('/pretax-charges', { state: { flash: { type: 'success', message: 'PreTaxCharge creado.' } } })
       }
     } catch (e: any) {
       setError(drfErrorToMessage(e, 'No se pudo guardar.'))
@@ -100,17 +86,6 @@ const TaxFormPage: React.FC = () => {
           <input className="form-control" value={porcentaje} onChange={(e) => setPorcentaje(e.target.value)} required />
         </div>
 
-        <div className="col-12 col-md-4">
-          <label className="form-label">Mínimo (U$D)</label>
-          <input
-            className="form-control"
-            value={montoMinimo}
-            onChange={(e) => setMontoMinimo(e.target.value)}
-            placeholder="Ej: 450.00 (opcional)"
-          />
-          <div className="form-text">Si se setea, el impuesto será MAX(% calculado, mínimo).</div>
-        </div>
-
         <div className="col-12">
           <div className="form-check">
             <input
@@ -126,26 +101,11 @@ const TaxFormPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="col-12">
-          <div className="form-check">
-            <input
-              className="form-check-input"
-              type="checkbox"
-              checked={seImprime}
-              onChange={(e) => setSeImprime(e.target.checked)}
-              id="se_imprime_en_presupuesto"
-            />
-            <label className="form-check-label" htmlFor="se_imprime_en_presupuesto">
-              Se imprime en presupuesto
-            </label>
-          </div>
-        </div>
-
         <div className="col-12 d-flex gap-2">
           <button className="btn btn-primary rounded-pill" disabled={loading}>
             {loading ? 'Guardando...' : 'Guardar'}
           </button>
-          <button type="button" className="btn btn-outline-secondary rounded-pill" onClick={() => navigate('/taxes')}>
+          <button type="button" className="btn btn-outline-secondary rounded-pill" onClick={() => navigate('/pretax-charges')}>
             Cancelar
           </button>
         </div>
@@ -154,4 +114,4 @@ const TaxFormPage: React.FC = () => {
   )
 }
 
-export default TaxFormPage
+export default PreTaxChargeFormPage

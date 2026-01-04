@@ -8,6 +8,8 @@ from machinery.models import (
     LogisticsLeg,
     LogisticsType,
     LogisticsStage,
+    Client,
+    PreTaxCharge
 )
 
 class MachineBaseSerializer(serializers.ModelSerializer):
@@ -25,7 +27,7 @@ class AccessorySerializer(serializers.ModelSerializer):
 class TaxSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tax
-        fields = ["id", "nombre", "porcentaje", "monto_minimo", "siempre_incluir", "created_at", "updated_at"]
+        fields = ["id", "nombre", "porcentaje", "monto_minimo", "siempre_incluir","se_imprime_en_presupuesto", "created_at", "updated_at"]
         read_only_fields = ["id", "created_at", "updated_at"]
 
 class LogisticsLegSerializer(serializers.ModelSerializer):
@@ -35,4 +37,16 @@ class LogisticsLegSerializer(serializers.ModelSerializer):
     class Meta:
         model = LogisticsLeg
         fields = ["id", "desde", "hasta", "tipo", "etapa", "total", "created_at", "updated_at"]
+        read_only_fields = ["id", "created_at", "updated_at"]
+
+class ClientSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Client
+        fields = ["id", "nombre", "telefono", "email", "created_at", "updated_at"]
+        read_only_fields = ["id", "created_at", "updated_at"]
+
+class PreTaxChargeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PreTaxCharge
+        fields = ["id", "nombre", "porcentaje", "siempre_incluir", "created_at", "updated_at"]
         read_only_fields = ["id", "created_at", "updated_at"]

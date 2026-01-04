@@ -26,3 +26,8 @@ export async function editarTax(id: number, payload: TaxUpdatePayload): Promise<
 export async function eliminarTax(id: number): Promise<void> {
   await apiClient.delete(`/api/catalog/taxes/${id}/`)
 }
+
+export async function fetchTaxesAll(): Promise<Tax[]> {
+  const res = await apiClient.get<Tax[]>('/api/catalog/taxes/all/')
+  return res.data
+}

@@ -5,20 +5,18 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 
 from .base import TimeStampedModel, USD_VALIDATOR
-from .catalog import MachineBase, Accessory, Tax, LogisticsLeg
-
+from .catalog import MachineBase, Accessory, Tax, LogisticsLeg, Client, PreTaxCharge
 
 class BudgetStatus(models.TextChoices):
     DRAFT = "DRAFT", "Draft"
     CERRADO = "CERRADO", "Cerrado"
 
-
 class Budget(TimeStampedModel):
     numero = models.CharField(max_length=50, unique=True)
     fecha = models.DateField()
     estado = models.CharField(max_length=10, choices=BudgetStatus.choices, default=BudgetStatus.DRAFT)
+    cliente = models.ForeignKey(Client, on_delete=models.PROTECT, null=True, blank=True, related_name="budgets")
 
-    # Snapshots (se llenan al cerrar)
     subtotal_maquinas_snapshot = models.DecimalField(
         max_digits=14, decimal_places=2, validators=[USD_VALIDATOR], default=Decimal("0.00")
     )
@@ -29,6 +27,12 @@ class Budget(TimeStampedModel):
         max_digits=14, decimal_places=2, validators=[USD_VALIDATOR], default=Decimal("0.00")
     )
     subtotal_logistica_post_aduana_snapshot = models.DecimalField(
+        max_digits=14, decimal_places=2, validators=[USD_VALIDATOR], default=Decimal("0.00")
+    )
+    base_pre_impuestos_snapshot = models.DecimalField(
+        max_digits=14, decimal_places=2, validators=[USD_VALIDATOR], default=Decimal("0.00")
+    )
+    total_pretax_charges_snapshot = models.DecimalField(
         max_digits=14, decimal_places=2, validators=[USD_VALIDATOR], default=Decimal("0.00")
     )
     base_imponible_snapshot = models.DecimalField(
@@ -55,7 +59,6 @@ class Budget(TimeStampedModel):
     def __str__(self) -> str:
         return f"Presupuesto {self.numero}"
 
-
 class BudgetItem(TimeStampedModel):
     budget = models.ForeignKey(Budget, on_delete=models.CASCADE, related_name="items")
     machine_base = models.ForeignKey(MachineBase, on_delete=models.PROTECT, related_name="budget_items")
@@ -78,7 +81,6 @@ class BudgetItem(TimeStampedModel):
 
     def __str__(self) -> str:
         return f"{self.machine_base.nombre} x {self.cantidad}"
-
 
 class BudgetItemAccessory(TimeStampedModel):
     budget_item = models.ForeignKey(BudgetItem, on_delete=models.CASCADE, related_name="accesorios")
@@ -108,7 +110,6 @@ class BudgetItemAccessory(TimeStampedModel):
 
     def __str__(self) -> str:
         return f"{self.accessory.nombre} x {self.cantidad}"
-
 
 class BudgetTaxApplied(TimeStampedModel):
     budget = models.ForeignKey(Budget, on_delete=models.CASCADE, related_name="impuestos")
@@ -152,6 +153,38 @@ class BudgetTaxApplied(TimeStampedModel):
     def __str__(self) -> str:
         return f"{self.tax.nombre} ({'incluido' if self.incluido else 'no'})"
 
+class BudgetPreTaxChargeApplied(TimeStampedModel):
+    budget = models.ForeignKey(Budget, on_delete=models.CASCADE, related_name="pretax_charges")
+    pre_tax_charge = models.ForeignKey(PreTaxCharge, on_delete=models.PROTECT, related_name="budget_pretax_charges")
+    incluido = models.BooleanField(default=True)
+
+    porcentaje_snapshot = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.00")), MaxValueValidator(Decimal("100.00"))],
+        default=Decimal("0.00"),
+    )
+
+    monto_aplicado_snapshot = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        validators=[USD_VALIDATOR],
+        default=Decimal("0.00"),
+    )
+
+    class Meta:
+        db_table = "budget_pre_tax_charge_applied"
+        ordering = ["id"]
+        indexes = [
+            models.Index(fields=["budget"]),
+            models.Index(fields=["pre_tax_charge"]),
+        ]
+        constraints = [
+            models.UniqueConstraint(fields=["budget", "pre_tax_charge"], name="uq_budget_pretax_charge"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.pre_tax_charge.nombre} ({'incluido' if self.incluido else 'no'})"
 
 class BudgetSelectedLogisticsLeg(TimeStampedModel):
     budget = models.ForeignKey(Budget, on_delete=models.CASCADE, related_name="logisticas")

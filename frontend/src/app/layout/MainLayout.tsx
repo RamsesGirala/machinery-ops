@@ -56,6 +56,14 @@ const MainLayout: React.FC = () => {
             Taxes
           </NavLink>
 
+          <NavLink to="/clients" className={linkClass}>
+            Clients
+          </NavLink>
+
+          <NavLink to="/pretax-charges" className={linkClass}>
+            PreTax Charges
+          </NavLink>
+
           <NavLink to="/budgets" className={linkClass}>
             Bugdets
           </NavLink>
