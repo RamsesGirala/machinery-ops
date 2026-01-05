@@ -1,11 +1,11 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { createBudget, updateBudget, fetchBudget } from '../../api/budgetsApi'
 
-import { fetchMachines } from '../../api/machinesApi'
-import { fetchAccessories } from '../../api/accessoriesApi'
-import { fetchLogisticsLegs } from '../../api/logisticsLegsApi'
-import { fetchTaxes } from '../../api/taxesApi'
+import { fetchMachinesAll } from '../../api/machinesApi'
+import { fetchAccessoriesAll } from '../../api/accessoriesApi'
+import { fetchLogisticsLegsAll } from '../../api/logisticsLegsApi'
+import { fetchTaxesAll } from '../../api/taxesApi'
 import { fetchClientsAll } from '../../api/clientsApi'
 import { fetchPreTaxChargesAll } from '../../api/preTaxChargesApi'
 
@@ -13,6 +13,7 @@ import type { MachineBase, Accessory, LogisticsLeg, Tax, Client, PreTaxCharge} f
 import type { BudgetCreatePayload } from '../../api/types/payloads'
 import { formatUSD } from '../../utils/money'
 import ErrorAlert from '../../components/global/ErrorAlert'
+import SearchSelect from '../../components/global/SearchSelect'
 
 type MachineLine = {
   machine_base_id: number
@@ -67,9 +68,10 @@ export default function BudgetCreatePage() {
   // impuestos seleccionados (incluido + porcentaje override)
   const [taxSel, setTaxSel] = useState<Record<number, TaxSel>>({})
 
-  // refs para resetear selects
-  const machinePickerRef = useRef<HTMLSelectElement | null>(null)
-  const accessoryPickerRefs = useRef<Record<number, HTMLSelectElement | null>>({})
+  // pickers buscables
+  const [machinePickId, setMachinePickId] = useState<number | ''>('')
+  const [accessoryPickByLine, setAccessoryPickByLine] = useState<Record<number, number | ''>>({})
+
 
   const machineById = useMemo(() => new Map(machines.map((m) => [m.id, m])), [machines])
   const accessoryById = useMemo(() => new Map(accessories.map((a) => [a.id, a])), [accessories])
@@ -80,19 +82,19 @@ export default function BudgetCreatePage() {
     ;(async () => {
       try {
         setError(null)
-        const [m, a, l, t, cAll, pAll] = await Promise.all([
-          fetchMachines({ page: 1, pageSize: 200 }),
-          fetchAccessories({ page: 1, pageSize: 500 }),
-          fetchLogisticsLegs({ page: 1, pageSize: 200 }),
-          fetchTaxes({ page: 1, pageSize: 200 }),
+        const [mAll, aAll, lAll, tAll, cAll, pAll] = await Promise.all([
+          fetchMachinesAll(),
+          fetchAccessoriesAll(),
+          fetchLogisticsLegsAll(),
+          fetchTaxesAll(),
           fetchClientsAll(),
           fetchPreTaxChargesAll(),
         ])
 
-        setMachines(m.results)
-        setAccessories(a.results)
-        setLegs(l.results)
-        setTaxes(t.results)
+        setMachines(mAll)
+        setAccessories(aAll)
+        setLegs(lAll)
+        setTaxes(tAll)
         setClients(cAll)
         setPreTaxCharges(pAll)
         
@@ -110,7 +112,7 @@ export default function BudgetCreatePage() {
 
         // Inicializamos taxSel con todos los impuestos: incluido si siempre_incluir, porcentaje editable
         const init: Record<number, TaxSel> = {}
-        for (const tx of t.results) {
+        for (const tx of tAll) {
           init[tx.id] = {
             tax_id: tx.id,
             incluido: tx.siempre_incluir ? true : false,
@@ -444,14 +446,14 @@ export default function BudgetCreatePage() {
 
           <div className="col-md-5">
             <label className="form-label">Cliente (opcional)</label>
-            <select className="form-select" value={clienteId ?? ''} onChange={(e) => setClienteId(e.target.value ? Number(e.target.value) : null)}>
-              <option value="">— Sin cliente —</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nombre}
-                </option>
-              ))}
-            </select>
+            <SearchSelect
+              value={clienteId ?? ''}
+              placeholder="Buscar cliente..."
+              emptyLabel="— Sin cliente —"
+              options={clients.map((c) => ({ value: c.id, label: c.nombre }))}
+              onChange={(v) => setClienteId(v ? Number(v) : null)}
+            />
+
           </div>
         </div>
       </div>
@@ -461,24 +463,23 @@ export default function BudgetCreatePage() {
         <div className="card-body">
           <div className="d-flex justify-content-between align-items-center mb-2">
             <h5 className="mb-0">Máquinas</h5>
-            <div className="d-flex gap-2">
-              <select ref={machinePickerRef} className="form-select" defaultValue="">
-                <option value="" disabled>
-                  Agregar máquina...
-                </option>
-                {machines.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.nombre} ({formatUSD(m.total)})
-                  </option>
-                ))}
-              </select>
+            <div className="d-flex gap-2 align-items-start" style={{ minWidth: 520 }}>
+              <div className="flex-grow-1" style={{ minWidth: 420 }}>
+                <SearchSelect
+                  value={machinePickId}
+                  placeholder="Buscar máquina..."
+                  emptyLabel="Agregar máquina..."
+                  options={machines.map((m) => ({ value: m.id, label: `${m.nombre} (${formatUSD(m.total)})` }))}
+                  onChange={(v) => setMachinePickId(v ? Number(v) : '')}
+                />
+              </div>
+
               <button
                 className="btn btn-outline-primary"
                 onClick={() => {
-                  const sel = machinePickerRef.current
-                  if (sel && sel.value) {
-                    addMachineLine(Number(sel.value))
-                    sel.value = '' // reset
+                  if (machinePickId) {
+                    addMachineLine(Number(machinePickId))
+                    setMachinePickId('')
                   }
                 }}
               >
@@ -545,30 +546,27 @@ export default function BudgetCreatePage() {
                   <div className="mt-2">
                     <div className="d-flex justify-content-between align-items-center">
                       <div className="fw-semibold">Accesorios</div>
-                      <div className="d-flex gap-2">
-                        <select
-                          className="form-select form-select-sm"
-                          defaultValue=""
-                          ref={(el) => {
-                            accessoryPickerRefs.current[idx] = el
-                          }}
-                        >
-                          <option value="" disabled>
-                            Agregar accesorio...
-                          </option>
-                          {accessories.map((a) => (
-                            <option key={a.id} value={a.id}>
-                              {a.nombre} ({formatUSD(a.total)})
-                            </option>
-                          ))}
-                        </select>
+                      <div className="d-flex gap-2 align-items-start" style={{ minWidth: 520 }}>
+                        <div className="flex-grow-1" style={{ minWidth: 420 }}>
+                          <SearchSelect
+                            size="sm"
+                            value={accessoryPickByLine[idx] ?? ''}
+                            placeholder="Buscar accesorio..."
+                            emptyLabel="Agregar accesorio..."
+                            options={accessories.map((a) => ({ value: a.id, label: `${a.nombre} (${formatUSD(a.total)})` }))}
+                            onChange={(v) =>
+                              setAccessoryPickByLine((prev) => ({ ...prev, [idx]: v ? Number(v) : '' }))
+                            }
+                          />
+                        </div>
+
                         <button
                           className="btn btn-sm btn-outline-primary"
                           onClick={() => {
-                            const sel = accessoryPickerRefs.current[idx]
-                            if (sel && sel.value) {
-                              addAccessoryToItem(idx, Number(sel.value))
-                              sel.value = '' // reset
+                            const picked = accessoryPickByLine[idx]
+                            if (picked) {
+                              addAccessoryToItem(idx, Number(picked))
+                              setAccessoryPickByLine((prev) => ({ ...prev, [idx]: '' }))
                             }
                           }}
                         >

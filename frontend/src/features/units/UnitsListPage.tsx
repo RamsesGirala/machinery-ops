@@ -8,6 +8,8 @@ import ErrorAlert from '../../components/global/ErrorAlert'
 import UnitLifecycleModal from '../../components/units/UnitLifecycleModal'
 import { useUnitLifecycleModal } from '../../hooks/useUnitLifecycleModal'
 
+import { formatDateAR } from '../../utils/date'
+
 export default function UnitsListPage() {
   const nav = useNavigate()
   const lifecycle = useUnitLifecycleModal()
@@ -151,7 +153,7 @@ export default function UnitsListPage() {
                     <td>
                       <span className="badge bg-secondary">{u.estado}</span>
                     </td>
-                    <td>{u.fecha_compra}</td>
+                    <td>{formatDateAR(u.fecha_compra)}</td>
                     <td className="text-muted">{u.budget_numero}</td>
                     <td className="text-end">
                       <button className="btn btn-sm btn-outline-secondary me-2" onClick={() => nav(`/units/${u.id}`)}>

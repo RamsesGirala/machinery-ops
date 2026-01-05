@@ -38,6 +38,24 @@ class CatalogSeedViewSet(viewsets.ViewSet):
             status=status.HTTP_200_OK,
         )
 
+    @action(detail=False, methods=["post"], url_path="apply_catalog")
+    def apply(self, request):
+        res = apply_seed(clear_first=True)
+
+        return Response(
+            {
+                "ok": True,
+                "message": "Seed aplicado (catálogo + demo).",
+                "counts": {
+                    "machines": res.machines,
+                    "accessories": res.accessories,
+                    "taxes": res.taxes,
+                    "logistics_legs": res.logistics_legs,
+                },
+            },
+            status=status.HTTP_200_OK,
+        )
+
     @action(detail=False, methods=["post"], url_path="clear")
     def clear(self, request):
         clear_demo_data()

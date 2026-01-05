@@ -8,6 +8,11 @@ export async function fetchMachines(params: { page?: number; pageSize?: number }
   return res.data
 }
 
+export async function fetchMachinesAll(): Promise<MachineBase[]> {
+  const res = await apiClient.get<MachineBase[]>('/api/catalog/machines/all/')
+  return res.data
+}
+
 export async function fetchMachine(id: number): Promise<MachineBase> {
   const res = await apiClient.get<MachineBase>(`/api/catalog/machines/${id}/`)
   return res.data

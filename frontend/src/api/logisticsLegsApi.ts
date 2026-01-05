@@ -8,6 +8,12 @@ export async function fetchLogisticsLegs(params: { page?: number; pageSize?: num
   return res.data
 }
 
+export async function fetchLogisticsLegsAll(): Promise<LogisticsLeg[]> {
+  const res = await apiClient.get<LogisticsLeg[]>('/api/catalog/logistics-legs/all/')
+  return res.data
+}
+
+
 export async function fetchLogisticsLeg(id: number): Promise<LogisticsLeg> {
   const res = await apiClient.get<LogisticsLeg>(`/api/catalog/logistics-legs/${id}/`)
   return res.data

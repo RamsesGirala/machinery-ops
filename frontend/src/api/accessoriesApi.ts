@@ -8,6 +8,12 @@ export async function fetchAccessories(params: { page?: number; pageSize?: numbe
   return res.data
 }
 
+export async function fetchAccessoriesAll(): Promise<Accessory[]> {
+  const res = await apiClient.get<Accessory[]>('/api/catalog/accessories/all/')
+  return res.data
+}
+
+
 export async function fetchAccessory(id: number): Promise<Accessory> {
   const res = await apiClient.get<Accessory>(`/api/catalog/accessories/${id}/`)
   return res.data

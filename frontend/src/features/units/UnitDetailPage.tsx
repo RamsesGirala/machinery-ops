@@ -7,7 +7,7 @@ import ErrorAlert from '../../components/global/ErrorAlert'
 import UnitLifecycleModal from '../../components/units/UnitLifecycleModal'
 import { useUnitLifecycleModal } from '../../hooks/useUnitLifecycleModal'
 import { formatUSD } from '../../utils/money'
-
+import { formatDateAR } from '../../utils/date'
 
 
 export default function UnitDetailPage() {
@@ -94,7 +94,7 @@ export default function UnitDetailPage() {
 
               <div className="col-12 col-md-3">
                 <div className="text-muted small">Fecha compra</div>
-                <div className="fw-semibold">{data.fecha_compra}</div>
+                <div className="fw-semibold">{formatDateAR(data.fecha_compra)}</div>
               </div>
 
               <div className="col-12 col-md-3">
@@ -131,7 +131,7 @@ export default function UnitDetailPage() {
                     <div className="d-flex flex-wrap gap-3">
                       <div>
                         <div className="text-muted small">Fecha</div>
-                        <div className="fw-semibold">{data.venta.fecha_operacion ?? '—'}</div>
+                        <div className="fw-semibold">{formatDateAR(data.venta.fecha_operacion) }</div>
                       </div>
                       <div>
                         <div className="text-muted small">Total</div>
@@ -182,9 +182,9 @@ export default function UnitDetailPage() {
                           const activo = !a.retorno_real_year || !a.retorno_real_month
                           return (
                             <tr key={a.id}>
-                              <td>{a.rental_inicio ?? '—'}</td>
-                              <td>{a.rental_fin_estimado ?? '—'}</td>
-                              <td>{a.rental_fin_real ?? '—'}</td>
+                              <td>{formatDateAR(a.rental_inicio)}</td>
+                              <td>{formatDateAR(a.rental_fin_estimado)}</td>
+                              <td>{formatDateAR(a.rental_fin_real)}</td>
                               <td>{a.rental_tipo ?? '—'}</td>
                               <td className="text-end">{formatUSD(a.monto_unitario)}</td>
                               <td className="text-end">{formatUSD(a.monto_total_final)}</td>

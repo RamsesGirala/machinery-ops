@@ -4,6 +4,7 @@ import { fetchBudget } from '../../api/budgetsApi'
 import type { BudgetDetail } from '../../api/types/models'
 import ErrorAlert from '../../components/global/ErrorAlert'
 import { formatUSD } from '../../utils/money'
+import { formatDateAR } from '../../utils/date'
 
 export default function BudgetDetailPage() {
   const { id } = useParams()
@@ -33,7 +34,7 @@ export default function BudgetDetailPage() {
         <div>
           <h2 className="mb-1">Presupuesto</h2>
           <div className="text-muted">
-            {data ? `${data.numero} · ${data.fecha}${data.cliente ? ` · ${data.cliente.nombre}` : ''}` : 'Cargando...'}
+            {data ? `${data.numero} · ${formatDateAR(data.fecha)}${data.cliente ? ` · ${data.cliente.nombre}` : ''}` : 'Cargando...'}
           </div>
         </div>
 

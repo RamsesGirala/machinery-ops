@@ -6,6 +6,7 @@ import PaginationBar from '../../components/global/PaginationBar'
 import ErrorAlert from '../../components/global/ErrorAlert'
 import ConfirmModal from '../../components/global/ConfirmModal'
 import { formatUSD } from '../../utils/money'
+import { formatDateAR } from '../../utils/date'
 
 export default function BudgetsListPage() {
   const nav = useNavigate()
@@ -185,7 +186,7 @@ export default function BudgetsListPage() {
                         <span className="text-muted">—</span>
                       )}
                     </td>
-                    <td>{b.fecha}</td>
+                    <td>{formatDateAR(b.fecha)}</td>
                     <td>{formatUSD(b.total_snapshot)}</td>
                     <td>
                       <span className={`badge ${b.estado === 'CERRADO' ? 'bg-success' : 'bg-secondary'}`}>

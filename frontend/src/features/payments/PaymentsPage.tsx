@@ -5,9 +5,11 @@ import { fetchRevenuePayments, markPaymentPaid, type RevenuePaymentListItem } fr
 import { fetchClientsAll } from '../../api/clientsApi'
 import type { Client } from '../../api/types/models'
 import { formatUSD } from '../../utils/money'
+import { formatDateAR } from '../../utils/date'
 import { drfErrorToMessage } from '../../utils/drfErrorToMessage'
 import type { PaginatedResponse } from '../../api/types'
 import ConfirmModal from '../../components/global/ConfirmModal'
+import SearchSelect from '../../components/global/SearchSelect'
 
 
 function toISO(d: Date): string {
@@ -134,21 +136,17 @@ export default function PaymentsPage() {
 
             <div className="col-12 col-md-5">
               <label className="form-label">Cliente</label>
-              <select
-                className="form-select"
+              <SearchSelect
                 value={clienteId}
-                onChange={(e) => {
+                placeholder="Buscar cliente..."
+                emptyLabel="— Todos —"
+                options={clients.map((c) => ({ value: c.id, label: c.nombre }))}
+                onChange={(v) => {
                   setPage(1)
-                  setClienteId(e.target.value ? Number(e.target.value) : '')
+                  setClienteId(v ? Number(v) : '')
                 }}
-              >
-                <option value="">— Todos —</option>
-                {clients.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nombre}
-                  </option>
-                ))}
-              </select>
+              />
+
             </div>
 
             <div className="col-12 col-md-2">
@@ -305,7 +303,7 @@ export default function PaymentsPage() {
           <table className="table align-middle">
             <thead>
               <tr>
-                <th>Fecha</th>
+                <th>Fecha Prevista</th>
                 <th>Cliente</th>
                 <th>Tipo</th>
                 <th>Método</th>
@@ -317,7 +315,7 @@ export default function PaymentsPage() {
             <tbody>
               {data.results.map((p) => (
                 <tr key={p.id}>
-                  <td>{p.fecha_prevista}</td>
+                  <td>{formatDateAR(p.fecha_prevista)}</td>
                   <td>{p.cliente?.nombre ?? '—'}</td>
                   <td>{p.revenue_event_tipo}</td>
                   <td>{p.metodo_pago}</td>
