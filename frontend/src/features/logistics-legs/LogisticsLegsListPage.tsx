@@ -41,7 +41,7 @@ const LogisticsLegsListPage: React.FC = () => {
       setCount(res.count)
       if (page > pages) setPage(pages)
     } catch (e: any) {
-      setError(drfErrorToMessage(e, 'No se pudieron cargar los logistics legs.'))
+      setError(e.response.data.error.message)
     } finally {
       setLoading(false)
     }
@@ -66,10 +66,10 @@ const LogisticsLegsListPage: React.FC = () => {
     setError(null)
     try {
       await eliminarLogisticsLeg(id)
-      navigate('/logistics-legs', { state: { flash: { type: 'success', message: 'Logistics leg eliminado.' } } })
+      navigate('/logistics-legs', { state: { flash: { type: 'success', message: 'Tramo de Logistica eliminado.' } } })
       await load()
     } catch (e: any) {
-      setError(drfErrorToMessage(e, 'No se pudo eliminar.'))
+      setError(e.response.data.error.message)
     } finally {
       setLoading(false)
     }
@@ -79,7 +79,7 @@ const LogisticsLegsListPage: React.FC = () => {
     <div>
       <div className="d-flex justify-content-between align-items-start mb-3">
         <div>
-          <h2 className="mb-1">Logistics Legs</h2>
+          <h2 className="mb-1">Tramos de Logistica</h2>
         </div>
 
         <div className="d-flex gap-2 align-items-center">

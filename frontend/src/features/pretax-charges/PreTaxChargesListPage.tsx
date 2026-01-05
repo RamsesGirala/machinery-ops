@@ -40,7 +40,7 @@ const PreTaxChargesListPage: React.FC = () => {
       setCount(res.count)
       if (page > pages) setPage(pages)
     } catch (e: any) {
-      setError(drfErrorToMessage(e, 'No se pudieron cargar los pretax charges.'))
+      setError(e.response.data.error.message)
     } finally {
       setLoading(false)
     }
@@ -65,10 +65,10 @@ const PreTaxChargesListPage: React.FC = () => {
     setError(null)
     try {
       await eliminarPreTaxCharge(id)
-      navigate('/pretax-charges', { state: { flash: { type: 'success', message: 'PreTaxCharge eliminado.' } } })
+      navigate('/pretax-charges', { state: { flash: { type: 'success', message: 'Carga Pre Impuesto eliminada.' } } })
       await load()
     } catch (e: any) {
-      setError(drfErrorToMessage(e, 'No se pudo eliminar.'))
+      setError(e.response.data.error.message)
     } finally {
       setLoading(false)
     }

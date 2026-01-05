@@ -417,8 +417,8 @@ export default function BudgetCreatePage() {
         const created: any = await createBudget(payload)
         nav(`/budgets/${created.id}`)
       }
-    } catch {
-      setError(isEdit ? 'No se pudo editar el presupuesto.' : 'No se pudo crear el presupuesto. Revisá que los datos sean válidos.')
+    } catch (e : any) {      
+      setError(isEdit ? ('No se pudo editar el presupuesto. ' + e.response.data.error.message) : ('No se pudo crear el presupuesto. ' + e.response.data.error.message))
     } finally {
       setSaving(false)
     }

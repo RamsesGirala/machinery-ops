@@ -17,7 +17,7 @@ const PreTaxChargeFormPage: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const title = useMemo(() => (isEdit ? 'Editar PreTaxCharge' : 'Nuevo PreTaxCharge'), [isEdit])
+  const title = useMemo(() => (isEdit ? 'Editar Carga Pre Impuesto' : 'Nueva Carga Pre Impuesto'), [isEdit])
 
   useEffect(() => {
     const load = async () => {
@@ -30,7 +30,7 @@ const PreTaxChargeFormPage: React.FC = () => {
         setPorcentaje(data.porcentaje)
         setSiempreIncluir(Boolean(data.siempre_incluir))
       } catch (e: any) {
-        setError(drfErrorToMessage(e, 'No se pudo cargar el pretax charge.'))
+        setError(drfErrorToMessage(e, 'No se pudo cargar la carga pre impuesto.'))
       } finally {
         setLoading(false)
       }
@@ -49,14 +49,14 @@ const PreTaxChargeFormPage: React.FC = () => {
       if (isEdit) {
         const payload: PreTaxChargeUpdatePayload = payloadBase
         await editarPreTaxCharge(Number(id), payload)
-        navigate('/pretax-charges', { state: { flash: { type: 'success', message: 'PreTaxCharge actualizado.' } } })
+        navigate('/pretax-charges', { state: { flash: { type: 'success', message: 'Carga Pre Impuesto actualizada.' } } })
       } else {
         const payload: PreTaxChargeCreatePayload = payloadBase
         await crearPreTaxCharge(payload)
-        navigate('/pretax-charges', { state: { flash: { type: 'success', message: 'PreTaxCharge creado.' } } })
+        navigate('/pretax-charges', { state: { flash: { type: 'success', message: 'Carga Pre Impuesto creada.' } } })
       }
     } catch (e: any) {
-      setError(drfErrorToMessage(e, 'No se pudo guardar.'))
+      setError(e.response.data.error.message)
     } finally {
       setLoading(false)
     }

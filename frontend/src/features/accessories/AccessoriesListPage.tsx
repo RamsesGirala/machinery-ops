@@ -41,7 +41,7 @@ const AccessoriesListPage: React.FC = () => {
       setCount(res.count)
       if (page > pages) setPage(pages)
     } catch (e: any) {
-      setError(drfErrorToMessage(e, 'No se pudieron cargar los accessories.'))
+      setError(drfErrorToMessage(e, 'No se pudieron cargar los accesorios.'))
     } finally {
       setLoading(false)
     }
@@ -66,10 +66,10 @@ const AccessoriesListPage: React.FC = () => {
     setError(null)
     try {
       await eliminarAccessory(id)
-      navigate('/accessories', { state: { flash: { type: 'success', message: 'Accessory eliminado.' } } })
+      navigate('/accessories', { state: { flash: { type: 'success', message: 'Accesorio eliminado.' } } })
       await load()
     } catch (e: any) {
-      setError(drfErrorToMessage(e, 'No se pudo eliminar.'))
+      setError(e.response.data.error.message)
     } finally {
       setLoading(false)
     }
@@ -79,7 +79,7 @@ const AccessoriesListPage: React.FC = () => {
     <div>
       <div className="d-flex justify-content-between align-items-start mb-3">
         <div>
-          <h2 className="mb-1">Accessories</h2>
+          <h2 className="mb-1">Accesorios</h2>
         </div>
 
         <div className="d-flex gap-2 align-items-center">
@@ -154,7 +154,7 @@ const AccessoriesListPage: React.FC = () => {
 
       <ConfirmModal
         show={confirmId !== null}
-        title="Eliminar accessory"
+        title="Eliminar Accesorio"
         message="¿Seguro que querés eliminar este registro?"
         confirmText="Eliminar"
         onCancel={() => setConfirmId(null)}

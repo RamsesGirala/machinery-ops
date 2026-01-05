@@ -23,7 +23,7 @@ const LogisticsLegFormPage: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const title = useMemo(() => (isEdit ? 'Editar Logistics Leg' : 'Nuevo Logistics Leg'), [isEdit])
+  const title = useMemo(() => (isEdit ? 'Editar Tramo de Logistica' : 'Nuevo Tramo de Logistica'), [isEdit])
 
   useEffect(() => {
     const load = async () => {
@@ -38,7 +38,7 @@ const LogisticsLegFormPage: React.FC = () => {
         setEtapa(data.etapa)
         setTotal(data.total)
       } catch (e: any) {
-        setError(drfErrorToMessage(e, 'No se pudo cargar el logistics leg.'))
+        setError(drfErrorToMessage(e, 'No se pudo cargar el tramo de logistica.'))
       } finally {
         setLoading(false)
       }
@@ -55,11 +55,11 @@ const LogisticsLegFormPage: React.FC = () => {
       if (isEdit) {
         const payload: LogisticsLegUpdatePayload = { desde, hasta, tipo, etapa, total }
         await editarLogisticsLeg(Number(id), payload)
-        navigate('/logistics-legs', { state: { flash: { type: 'success', message: 'Logistics leg actualizado.' } } })
+        navigate('/logistics-legs', { state: { flash: { type: 'success', message: 'Tramo de Logistica actualizado.' } } })
       } else {
         const payload: LogisticsLegCreatePayload = { desde, hasta, tipo, etapa, total }
         await crearLogisticsLeg(payload)
-        navigate('/logistics-legs', { state: { flash: { type: 'success', message: 'Logistics leg creado.' } } })
+        navigate('/logistics-legs', { state: { flash: { type: 'success', message: 'Tramo de Logistica creado.' } } })
       }
     } catch (e: any) {
       setError(drfErrorToMessage(e, 'No se pudo guardar.'))

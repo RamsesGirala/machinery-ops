@@ -1,11 +1,23 @@
-import React from 'react'
+import React, {useRef, useEffect} from 'react'
+import { useToast } from '../../hooks/useToast'
 
-const ErrorAlert: React.FC<{ message: string }> = ({ message }) => {
-  return (
-    <div className="alert alert-danger" role="alert">
-      {message}
-    </div>
-  )
+type Props = { message: string }
+
+const ErrorAlert: React.FC<Props> = ({ message }) => {
+  console.log(message)
+  
+  const toast = useToast()
+  const last = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (!message) return
+    if (last.current === message) return
+    last.current = message
+    toast.error(message, { title: 'Error' })
+  }, [message, toast])
+
+
+  return null
 }
 
 export default ErrorAlert

@@ -1,9 +1,7 @@
 import React from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
-import { useTheme } from '../theme/ThemeContext'
 
 const MainLayout: React.FC = () => {
-  const { theme, toggleTheme } = useTheme()
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     [
@@ -20,17 +18,9 @@ const MainLayout: React.FC = () => {
         <div className="d-flex align-items-center justify-content-between mb-3">
           <div>
             <div className="app-brand">Machinery Ops</div>
-            <div className="text-muted small">Catálogo</div>
+            <div className="text-muted small">Inicio</div>
           </div>
 
-          <button
-            type="button"
-            onClick={toggleTheme}
-            className="btn btn-sm btn-soft-primary rounded-pill"
-            title="Cambiar tema"
-          >
-            {theme === 'light' ? '🌙' : '☀️'}
-          </button>
         </div>
 
         <div className="d-flex flex-column gap-1">

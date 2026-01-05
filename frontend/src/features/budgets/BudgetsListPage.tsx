@@ -9,6 +9,7 @@ import ConfirmModal from '../../components/global/ConfirmModal'
 import SearchSelect from '../../components/global/SearchSelect'
 import { formatUSD } from '../../utils/money'
 import { formatDateAR } from '../../utils/date'
+import { useToast } from '../../hooks/useToast'
 
 export default function BudgetsListPage() {
   const nav = useNavigate()
@@ -21,6 +22,10 @@ export default function BudgetsListPage() {
   const [count, setCount] = useState<number>(0)
 
   const [confirmId, setConfirmId] = useState<number | null>(null)
+  const [confirmPurchasedId, setConfirmPurchasedId] = useState<number | null>(null)
+  const [confirmPurchasedLoading, setConfirmPurchasedLoading] = useState(false)
+
+  const toast = useToast()
 
   // filtros
   const [fechaDesde, setFechaDesde] = useState<string>('')
@@ -75,20 +80,28 @@ export default function BudgetsListPage() {
       await deleteBudget(id)
       setConfirmId(null)
       await load()
-    } catch {
-      setError('No se pudo eliminar el presupuesto.')
+    } catch(e: any){
+      setError(e.response.data.error.message)
     }
   }
 
-  async function onMarkPurchased(id: number) {
+  async function onMarkPurchasedConfirmed() {
+    if (!confirmPurchasedId) return
+
     try {
+      setConfirmPurchasedLoading(true)
       setError(null)
-      await markBudgetPurchased(id)
+      await markBudgetPurchased(confirmPurchasedId)
+      setConfirmPurchasedId(null)
+      toast.success('Presupuesto marcado como comprado.')
       await load()
-    } catch {
-      setError('No se pudo marcar como comprado.')
+    } catch (e: any) {
+      setError(e?.response?.data?.error?.message ?? 'No se pudo marcar como comprado.')
+    } finally {
+      setConfirmPurchasedLoading(false)
     }
   }
+
 
   return (
     <div>
@@ -241,7 +254,7 @@ export default function BudgetsListPage() {
 
                         <button
                           className="btn btn-sm btn-outline-success me-2"
-                          onClick={() => onMarkPurchased(b.id)}
+                          onClick={() => setConfirmPurchasedId(b.id)}
                         >
                           Marcar comprado
                         </button>
@@ -283,6 +296,19 @@ export default function BudgetsListPage() {
         onCancel={() => setConfirmId(null)}
         onConfirm={() => confirmId !== null && onDelete(confirmId)}
       />
+      <ConfirmModal
+        show={confirmPurchasedId !== null}
+        title="Confirmar compra"
+        message="¿Querés marcar este presupuesto como comprado? Esta acción no se puede deshacer."
+        confirmText="Sí, marcar comprado"
+        cancelText="Cancelar"
+        confirmVariant="success"
+        confirmDisabled={confirmPurchasedLoading}
+        cancelDisabled={confirmPurchasedLoading}
+        onCancel={() => setConfirmPurchasedId(null)}
+        onConfirm={onMarkPurchasedConfirmed}
+      />
+
     </div>
   )
 }

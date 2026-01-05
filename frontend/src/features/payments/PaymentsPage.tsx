@@ -10,7 +10,7 @@ import { drfErrorToMessage } from '../../utils/drfErrorToMessage'
 import type { PaginatedResponse } from '../../api/types'
 import ConfirmModal from '../../components/global/ConfirmModal'
 import SearchSelect from '../../components/global/SearchSelect'
-
+import { useToast } from '../../hooks/useToast'
 
 function toISO(d: Date): string {
   return d.toISOString().slice(0, 10)
@@ -47,6 +47,9 @@ export default function PaymentsPage() {
   const [confirmId, setConfirmId] = useState<number | null>(null)
   const [confirmLoading, setConfirmLoading] = useState(false)
 
+  const toast = useToast()
+
+
   async function load() {
     try {
       setError(null)
@@ -62,7 +65,7 @@ export default function PaymentsPage() {
       })
       setData(res)
     } catch (e: any) {
-      setError(drfErrorToMessage(e))
+      setError(e.response.data.error.message)
     }
   }
 
@@ -95,9 +98,10 @@ export default function PaymentsPage() {
       setError(null)
       await markPaymentPaid(confirmId)
       setConfirmId(null)
+      toast.success('Pago marcado como cobrado.')
       await load()
     } catch (e: any) {
-      setError(drfErrorToMessage(e))
+      setError(e.response.data.error.message)
     } finally {
       setConfirmLoading(false)
     }

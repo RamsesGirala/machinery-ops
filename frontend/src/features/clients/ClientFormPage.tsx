@@ -17,7 +17,7 @@ const ClientFormPage: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const title = useMemo(() => (isEdit ? 'Editar Client' : 'Nuevo Client'), [isEdit])
+  const title = useMemo(() => (isEdit ? 'Editar Cliente' : 'Nuevo Cliente'), [isEdit])
 
   useEffect(() => {
     const load = async () => {

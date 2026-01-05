@@ -73,7 +73,7 @@ export default function FinanceReportPage() {
       const rep = await fetchFinanceReport({ desde, hasta })
       setReport(rep)
     } catch (e: any) {
-      setError(drfErrorToMessage(e))
+      setError(e.response.data.error.message)
     } finally {
       setLoading(false)
     }

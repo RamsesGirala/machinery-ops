@@ -33,6 +33,11 @@ class ErrorCodes:
         default_message="Conflicto con el estado actual del recurso.",
         http_status=409,
     )
+    CATALOG_DELETE_PROTECTED = ErrorDef(
+        code="CATALOG_DELETE_PROTECTED",
+        default_message="No se puede eliminar el recurso porque está siendo usado por otros registros.",
+        http_status=409,
+    )
 
     # ---- Budget ----
     BUDGET_DELETE_NOT_ALLOWED = ErrorDef(

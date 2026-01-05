@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Dict
 
+from django.db.models import ProtectedError
+
 from machinery.models import MachineBase, Accessory, Tax, LogisticsLeg, Client, PreTaxCharge
 from .repositories import (
     MachineBaseRepository,
@@ -12,6 +14,21 @@ from .repositories import (
     ClientRepository,
     PreTaxChargeRepository
 )
+from ..shared.errors import DomainError, ErrorCodes
+
+
+def _raise_delete_protected(*, obj, pk: int, exc: ProtectedError, label: str) -> None:
+    details = {
+        "model": obj.__class__.__name__,
+        "id": pk,
+        "protected_by": sorted({o.__class__.__name__ for o in exc.protected_objects}),
+        "protected_count": len(exc.protected_objects),
+    }
+    raise DomainError(
+        ErrorCodes.CATALOG_DELETE_PROTECTED,
+        message_override=f"No se puede eliminar {label} porque está asociado a {len(exc.protected_objects)} registro(s).",
+        details=details,
+    )
 
 @dataclass
 class MachineBaseService:
@@ -29,7 +46,10 @@ class MachineBaseService:
 
     def delete(self, pk: int) -> None:
         obj = self.repo.get(pk)
-        self.repo.delete(obj)
+        try:
+            self.repo.delete(obj)
+        except ProtectedError as e:
+            _raise_delete_protected(obj=obj, pk=pk, exc=e, label="La maquina")
 
 @dataclass
 class AccessoryService:
@@ -47,7 +67,10 @@ class AccessoryService:
 
     def delete(self, pk: int) -> None:
         obj = self.repo.get(pk)
-        self.repo.delete(obj)
+        try:
+            self.repo.delete(obj)
+        except ProtectedError as e:
+            _raise_delete_protected(obj=obj, pk=pk, exc=e, label="El accesorio")
 
 @dataclass
 class TaxService:
@@ -65,7 +88,10 @@ class TaxService:
 
     def delete(self, pk: int) -> None:
         obj = self.repo.get(pk)
-        self.repo.delete(obj)
+        try:
+            self.repo.delete(obj)
+        except ProtectedError as e:
+            _raise_delete_protected(obj=obj, pk=pk, exc=e, label="El impuesto")
 
 @dataclass
 class LogisticsLegService:
@@ -83,7 +109,10 @@ class LogisticsLegService:
 
     def delete(self, pk: int) -> None:
         obj = self.repo.get(pk)
-        self.repo.delete(obj)
+        try:
+            self.repo.delete(obj)
+        except ProtectedError as e:
+            _raise_delete_protected(obj=obj, pk=pk, exc=e, label="El camino de logistica")
 
 @dataclass
 class ClientService:
@@ -101,7 +130,10 @@ class ClientService:
 
     def delete(self, pk: int) -> None:
         obj = self.repo.get(pk)
-        self.repo.delete(obj)
+        try:
+            self.repo.delete(obj)
+        except ProtectedError as e:
+            _raise_delete_protected(obj=obj, pk=pk, exc=e, label="El cliente")
 
 @dataclass
 class PreTaxChargeService:
@@ -119,4 +151,7 @@ class PreTaxChargeService:
 
     def delete(self, pk: int) -> None:
         obj = self.repo.get(pk)
-        self.repo.delete(obj)
+        try:
+            self.repo.delete(obj)
+        except ProtectedError as e:
+            _raise_delete_protected(obj=obj, pk=pk, exc=e, label="La carga pre impuesto")

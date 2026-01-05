@@ -24,8 +24,8 @@ export default function UnitDetailPage() {
       setError(null)
       const res = await fetchPurchasedUnit(Number(id))
       setData(res)
-    } catch {
-      setError('No se pudo cargar la unidad.')
+    } catch (e: any){
+      setError(e.response.data.error.message)
     }
   }
 
@@ -173,8 +173,7 @@ export default function UnitDetailPage() {
                           <th>Tipo</th>
                           <th className="text-end">Unitario</th>
                           <th className="text-end">Total</th>
-                          <th>Pagos</th>
-                          <th>Estado</th>
+                          <th className="text-end">Pagos Pendientes / Total</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -188,7 +187,7 @@ export default function UnitDetailPage() {
                               <td>{a.rental_tipo ?? '—'}</td>
                               <td className="text-end">{formatUSD(a.monto_unitario)}</td>
                               <td className="text-end">{formatUSD(a.monto_total_final)}</td>
-                              <td>{a.pagos_pendientes} / {a.pagos_cobrados}</td>
+                              <td className="text-end">{a.pagos_pendientes} / {a.pagos_pendientes + a.pagos_cobrados}</td>
                             </tr>
                           )
                         })}

@@ -252,7 +252,15 @@ class UnitLifecycleService:
                 details={"unit_id": unit.id, "estado_actual": unit.estado},
             )
 
-        cliente = Client.objects.get(pk=cliente_id)
+        try:
+            cliente = Client.objects.get(pk=cliente_id)
+        except Client.DoesNotExist:
+            raise DomainError(
+                ErrorCodes.NOT_FOUND,
+                message_override="El cliente indicado no existe o no se indico ningun cliente.",
+                details={"cliente_id": cliente_id},
+            )
+
 
         rt = RentalTipo(rental_tipo)
         mp = PaymentMethod(metodo_pago)
@@ -385,7 +393,15 @@ class UnitLifecycleService:
                 details={"unit_id": unit.id, "estado_actual": unit.estado},
             )
 
-        cliente = Client.objects.get(pk=cliente_id)
+        try:
+            cliente = Client.objects.get(pk=cliente_id)
+        except Client.DoesNotExist:
+            raise DomainError(
+                ErrorCodes.NOT_FOUND,
+                message_override="El cliente indicado no existe o no se indico ningun cliente.",
+                details={"cliente_id": cliente_id},
+            )
+        
         mp = PaymentMethod(metodo_pago)
 
         ev = RevenueEvent.objects.create(

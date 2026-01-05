@@ -41,7 +41,7 @@ const TaxesListPage: React.FC = () => {
       setCount(res.count)
       if (page > pages) setPage(pages)
     } catch (e: any) {
-      setError(drfErrorToMessage(e, 'No se pudieron cargar los taxes.'))
+      setError(e.response.data.error.message)
     } finally {
       setLoading(false)
     }
@@ -66,10 +66,10 @@ const TaxesListPage: React.FC = () => {
     setError(null)
     try {
       await eliminarTax(id)
-      navigate('/taxes', { state: { flash: { type: 'success', message: 'Tax eliminado.' } } })
+      navigate('/taxes', { state: { flash: { type: 'success', message: 'Impuesto eliminado.' } } })
       await load()
     } catch (e: any) {
-      setError(drfErrorToMessage(e, 'No se pudo eliminar.'))
+      setError(e.response.data.error.message)
     } finally {
       setLoading(false)
     }
@@ -79,7 +79,7 @@ const TaxesListPage: React.FC = () => {
     <div>
       <div className="d-flex justify-content-between align-items-start mb-3">
         <div>
-          <h2 className="mb-1">Taxes</h2>
+          <h2 className="mb-1">Impuestos</h2>
         </div>
         <div className="d-flex gap-2 align-items-center">
           <input

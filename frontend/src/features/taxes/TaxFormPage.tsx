@@ -19,7 +19,7 @@ const TaxFormPage: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const title = useMemo(() => (isEdit ? 'Editar Tax' : 'Nuevo Tax'), [isEdit])
+  const title = useMemo(() => (isEdit ? 'Editar Impuesto' : 'Nuevo Impuesto'), [isEdit])
 
   useEffect(() => {
     const load = async () => {
@@ -34,7 +34,7 @@ const TaxFormPage: React.FC = () => {
         setSiempreIncluir(Boolean(data.siempre_incluir))
         setSeImprime(Boolean(data.se_imprime_en_presupuesto))
       } catch (e: any) {
-        setError(drfErrorToMessage(e, 'No se pudo cargar el tax.'))
+        setError(e.response.data.error.message)
       } finally {
         setLoading(false)
       }
@@ -57,7 +57,7 @@ const TaxFormPage: React.FC = () => {
           se_imprime_en_presupuesto: seImprime
         }
         await editarTax(Number(id), payload)
-        navigate('/taxes', { state: { flash: { type: 'success', message: 'Tax actualizado.' } } })
+        navigate('/taxes', { state: { flash: { type: 'success', message: 'Impuesto actualizado.' } } })
       } else {
         const payload: TaxCreatePayload = {
           nombre,
@@ -67,10 +67,10 @@ const TaxFormPage: React.FC = () => {
           se_imprime_en_presupuesto: seImprime
         }
         await crearTax(payload)
-        navigate('/taxes', { state: { flash: { type: 'success', message: 'Tax creado.' } } })
+        navigate('/taxes', { state: { flash: { type: 'success', message: 'Impuesto creado.' } } })
       }
     } catch (e: any) {
-      setError(drfErrorToMessage(e, 'No se pudo guardar.'))
+      setError(e.response.data.error.message)
     } finally {
       setLoading(false)
     }

@@ -17,7 +17,7 @@ const MachineFormPage: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const title = useMemo(() => (isEdit ? 'Editar Machine' : 'Nueva Machine'), [isEdit])
+  const title = useMemo(() => (isEdit ? 'Editar Maquina Base' : 'Nueva Maquina Base'), [isEdit])
 
   useEffect(() => {
     const load = async () => {
@@ -29,7 +29,7 @@ const MachineFormPage: React.FC = () => {
         setNombre(data.nombre)
         setTotal(data.total)
       } catch (e: any) {
-        setError(drfErrorToMessage(e, 'No se pudo cargar la machine.'))
+        setError(drfErrorToMessage(e, 'No se pudo cargar la maquina base.'))
       } finally {
         setLoading(false)
       }
@@ -46,14 +46,14 @@ const MachineFormPage: React.FC = () => {
       if (isEdit) {
         const payload: MachineUpdatePayload = { nombre, total }
         await editarMachine(Number(id), payload)
-        navigate('/machines', { state: { flash: { type: 'success', message: 'Machine actualizada.' } } })
+        navigate('/machines', { state: { flash: { type: 'success', message: 'Maquina Base actualizada.' } } })
       } else {
         const payload: MachineCreatePayload = { nombre, total }
         await crearMachine(payload)
-        navigate('/machines', { state: { flash: { type: 'success', message: 'Machine creada.' } } })
+        navigate('/machines', { state: { flash: { type: 'success', message: 'Maquina Base creada.' } } })
       }
     } catch (e: any) {
-      setError(drfErrorToMessage(e, 'No se pudo guardar.'))
+      setError(e.response.data.error.message)
     } finally {
       setLoading(false)
     }

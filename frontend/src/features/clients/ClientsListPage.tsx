@@ -40,7 +40,7 @@ const ClientsListPage: React.FC = () => {
       setCount(res.count)
       if (page > pages) setPage(pages)
     } catch (e: any) {
-      setError(drfErrorToMessage(e, 'No se pudieron cargar los clientes.'))
+      setError(e.response.data.error.message)
     } finally {
       setLoading(false)
     }
@@ -70,7 +70,7 @@ const ClientsListPage: React.FC = () => {
       navigate('/clients', { state: { flash: { type: 'success', message: 'Cliente eliminado.' } } })
       await load()
     } catch (e: any) {
-      setError(drfErrorToMessage(e, 'No se pudo eliminar.'))
+      setError(e.response.data.error.message)
     } finally {
       setLoading(false)
     }

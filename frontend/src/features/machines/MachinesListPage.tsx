@@ -42,7 +42,7 @@ const MachinesListPage: React.FC = () => {
       setCount(res.count)
       if (page > pages) setPage(pages)
     } catch (e: any) {
-      setError(drfErrorToMessage(e, 'No se pudieron cargar las machines.'))
+      setError(e.response.data.error.message)
     } finally {
       setLoading(false)
     }
@@ -68,11 +68,11 @@ const MachinesListPage: React.FC = () => {
     try {
       await eliminarMachine(id)
       navigate('/machines', {
-        state: { flash: { type: 'success', message: 'Machine eliminada.' } }
+        state: { flash: { type: 'success', message: 'Maquina Base eliminada.' } }
       })
       await load()
     } catch (e: any) {
-      setError(drfErrorToMessage(e, 'No se pudo eliminar.'))
+      setError(e.response.data.error.message)
     } finally {
       setLoading(false)
     }
@@ -82,7 +82,7 @@ const MachinesListPage: React.FC = () => {
     <div>
       <div className="d-flex justify-content-between align-items-start mb-3">
         <div>
-          <h2 className="mb-1">Machines</h2>
+          <h2 className="mb-1">Maquinas Base</h2>
         </div>
         <div className="d-flex gap-2 align-items-center">
           <input

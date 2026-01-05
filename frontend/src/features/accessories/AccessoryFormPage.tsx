@@ -29,7 +29,7 @@ const AccessoryFormPage: React.FC = () => {
         setNombre(data.nombre)
         setTotal(data.total)
       } catch (e: any) {
-        setError(drfErrorToMessage(e, 'No se pudo cargar el accessory.'))
+        setError(e.response.data.error.message)
       } finally {
         setLoading(false)
       }
@@ -46,14 +46,14 @@ const AccessoryFormPage: React.FC = () => {
       if (isEdit) {
         const payload: AccessoryUpdatePayload = { nombre, total }
         await editarAccessory(Number(id), payload)
-        navigate('/accessories', { state: { flash: { type: 'success', message: 'Accessory actualizado.' } } })
+        navigate('/accessories', { state: { flash: { type: 'success', message: 'Accesorio actualizado.' } } })
       } else {
         const payload: AccessoryCreatePayload = { nombre, total }
         await crearAccessory(payload)
-        navigate('/accessories', { state: { flash: { type: 'success', message: 'Accessory creado.' } } })
+        navigate('/accessories', { state: { flash: { type: 'success', message: 'Accesorio creado.' } } })
       }
     } catch (e: any) {
-      setError(drfErrorToMessage(e, 'No se pudo guardar.'))
+      setError(e.response.data.error.message)
     } finally {
       setLoading(false)
     }

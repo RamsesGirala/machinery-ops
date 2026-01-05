@@ -410,7 +410,11 @@ export default function UnitLifecycleModal({ show, mode, unit, onClose, onSucces
       cancelText="Cancelar"
       confirmVariant={mode === 'sell' ? 'danger' : mode === 'finish' ? 'success' : 'primary'}
       onConfirm={onConfirm}
-      onCancel={onClose}
+      onCancel={() => {
+        setError(null)
+        setLoading(false)
+        onClose()
+      }}
       confirmDisabled={loading || !unit}
       cancelDisabled={loading}
     />

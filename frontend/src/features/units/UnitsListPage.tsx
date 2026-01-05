@@ -4,11 +4,10 @@ import { fetchPurchasedUnits, type UnitsListFilters } from '../../api/purchasedU
 import type { PurchasedUnit } from '../../api/types/models'
 import PaginationBar from '../../components/global/PaginationBar'
 import ErrorAlert from '../../components/global/ErrorAlert'
-
 import UnitLifecycleModal from '../../components/units/UnitLifecycleModal'
 import { useUnitLifecycleModal } from '../../hooks/useUnitLifecycleModal'
-
 import { formatDateAR } from '../../utils/date'
+import { useToast } from '../../hooks/useToast'
 
 export default function UnitsListPage() {
   const nav = useNavigate()
@@ -24,6 +23,8 @@ export default function UnitsListPage() {
   const [estado, setEstado] = useState<string>('') // '' = todos
   const [fechaDesde, setFechaDesde] = useState<string>('')
   const [fechaHasta, setFechaHasta] = useState<string>('')
+
+  const toast = useToast()
 
   const filters: UnitsListFilters = useMemo(
     () => ({
@@ -205,7 +206,14 @@ export default function UnitsListPage() {
         mode={lifecycle.mode}
         unit={lifecycle.unit}
         onClose={lifecycle.close}
-        onSuccess={load}
+        onSuccess={async () => {
+          const m = lifecycle.mode
+          await load()
+
+          if (m === 'sell') toast.success('Unidad marcada como vendida.')
+          else if (m === 'rent') toast.success('Unidad marcada como alquilada.')
+          else if (m === 'finish') toast.success('Alquiler finalizado.')
+        }}
       />
     </div>
   )
