@@ -22,6 +22,9 @@ const PreTaxChargesListPage: React.FC = () => {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
 
+  const [q, setQ] = useState('')
+  const [qApplied, setQApplied] = useState('')
+
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -32,7 +35,7 @@ const PreTaxChargesListPage: React.FC = () => {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetchPreTaxCharges({ page, pageSize })
+      const res = await fetchPreTaxCharges({ page, pageSize, q: qApplied || undefined})
       setItems(res.results)
       setCount(res.count)
       if (page > pages) setPage(pages)
@@ -44,9 +47,17 @@ const PreTaxChargesListPage: React.FC = () => {
   }
 
   useEffect(() => {
+    const t = setTimeout(() => {
+      setQApplied(q.trim())
+      setPage(1)
+    }, 300)
+    return () => clearTimeout(t)
+  }, [q])
+
+  useEffect(() => {
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, pageSize])
+  }, [page, pageSize, qApplied])
 
   const onDelete = async (id: number) => {
     setConfirmId(null)
@@ -67,12 +78,21 @@ const PreTaxChargesListPage: React.FC = () => {
     <div>
       <div className="d-flex justify-content-between align-items-start mb-3">
         <div>
-          <h2 className="mb-1">PreTax Charges</h2>
+          <h2 className="mb-1">Cargas Pre Impuestos</h2>
         </div>
 
-        <Link to="/pretax-charges/nuevo" className="btn btn-primary rounded-pill">
-          + Nuevo
-        </Link>
+        <div className="d-flex gap-2 align-items-center">
+          <input
+            className="form-control form-control-sm"
+            style={{ width: 260 }}
+            placeholder="Buscar por nombre..."
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
+          <Link to="/pretax-charges/nuevo" className="btn btn-primary rounded-pill">
+            + Nuevo
+          </Link>
+        </div>
       </div>
 
       <FlashAlert flash={flash} onClose={clearFlash} />

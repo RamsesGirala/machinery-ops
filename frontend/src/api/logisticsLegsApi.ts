@@ -1,9 +1,9 @@
 import { apiClient } from './client'
 import type { LogisticsLeg, LogisticsLegCreatePayload, LogisticsLegUpdatePayload, PaginatedResponse } from './types'
 
-export async function fetchLogisticsLegs(params: { page?: number; pageSize?: number } = {}): Promise<PaginatedResponse<LogisticsLeg>> {
+export async function fetchLogisticsLegs(params: { page?: number; pageSize?: number; q?: string} = {}): Promise<PaginatedResponse<LogisticsLeg>> {
   const res = await apiClient.get<PaginatedResponse<LogisticsLeg>>('/api/catalog/logistics-legs/', {
-    params: { page: params.page, page_size: params.pageSize }
+    params: { page: params.page, page_size: params.pageSize, q: params.q }
   })
   return res.data
 }
@@ -12,7 +12,6 @@ export async function fetchLogisticsLegsAll(): Promise<LogisticsLeg[]> {
   const res = await apiClient.get<LogisticsLeg[]>('/api/catalog/logistics-legs/all/')
   return res.data
 }
-
 
 export async function fetchLogisticsLeg(id: number): Promise<LogisticsLeg> {
   const res = await apiClient.get<LogisticsLeg>(`/api/catalog/logistics-legs/${id}/`)

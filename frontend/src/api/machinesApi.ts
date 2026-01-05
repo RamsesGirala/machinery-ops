@@ -1,9 +1,9 @@
 import { apiClient } from './client'
 import type { MachineBase, MachineCreatePayload, MachineUpdatePayload, PaginatedResponse } from './types'
 
-export async function fetchMachines(params: { page?: number; pageSize?: number } = {}): Promise<PaginatedResponse<MachineBase>> {
+export async function fetchMachines(params: { page?: number; pageSize?: number; q?: string } = {}): Promise<PaginatedResponse<MachineBase>> {
   const res = await apiClient.get<PaginatedResponse<MachineBase>>('/api/catalog/machines/', {
-    params: { page: params.page, page_size: params.pageSize }
+    params: { page: params.page, page_size: params.pageSize, q: params.q }
   })
   return res.data
 }

@@ -1,9 +1,9 @@
 import { apiClient } from './client'
 import type { Tax, TaxCreatePayload, TaxUpdatePayload, PaginatedResponse } from './types'
 
-export async function fetchTaxes(params: { page?: number; pageSize?: number } = {}): Promise<PaginatedResponse<Tax>> {
+export async function fetchTaxes(params: { page?: number; pageSize?: number; q?: string } = {}): Promise<PaginatedResponse<Tax>> {
   const res = await apiClient.get<PaginatedResponse<Tax>>('/api/catalog/taxes/', {
-    params: { page: params.page, page_size: params.pageSize }
+    params: { page: params.page, page_size: params.pageSize, q: params.q }
   })
   return res.data
 }

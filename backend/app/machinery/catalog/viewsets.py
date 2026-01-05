@@ -4,6 +4,7 @@ from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import MethodNotAllowed
 from rest_framework.response import Response
+from django.db.models import Q
 
 from .repositories import (
     MachineBaseRepository,
@@ -29,7 +30,6 @@ from .serializers import (
     ClientSerializer,
     PreTaxChargeSerializer
 )
-
 
 class NoPatchMixin:
     def partial_update(self, request, *args, **kwargs):
@@ -68,7 +68,11 @@ class MachineBaseViewSet(BaseCatalogViewSet):
         self.service = MachineBaseService(repo=MachineBaseRepository())
 
     def get_queryset(self):
-        return self.service.list_qs().order_by("nombre")
+        qs = self.service.list_qs()
+        q = (self.request.query_params.get("q") or self.request.query_params.get("nombre") or "").strip()
+        if q:
+            qs = qs.filter(nombre__icontains=q)
+        return qs.order_by("nombre")
 
     def perform_create(self, serializer):
         obj = self.service.create(serializer.validated_data)
@@ -89,7 +93,11 @@ class AccessoryViewSet(BaseCatalogViewSet):
         self.service = AccessoryService(repo=AccessoryRepository())
 
     def get_queryset(self):
-        return self.service.list_qs().order_by("nombre")
+        qs = self.service.list_qs()
+        q = (self.request.query_params.get("q") or self.request.query_params.get("nombre") or "").strip()
+        if q:
+            qs = qs.filter(nombre__icontains=q)
+        return qs.order_by("nombre")
 
     def perform_create(self, serializer):
         obj = self.service.create(serializer.validated_data)
@@ -110,7 +118,11 @@ class TaxViewSet(BaseCatalogViewSet):
         self.service = TaxService(repo=TaxRepository())
 
     def get_queryset(self):
-        return self.service.list_qs().order_by("nombre")
+        qs = self.service.list_qs()
+        q = (self.request.query_params.get("q") or self.request.query_params.get("nombre") or "").strip()
+        if q:
+            qs = qs.filter(nombre__icontains=q)
+        return qs.order_by("nombre")
 
     def perform_create(self, serializer):
         obj = self.service.create(serializer.validated_data)
@@ -131,7 +143,11 @@ class LogisticsLegViewSet(BaseCatalogViewSet):
         self.service = LogisticsLegService(repo=LogisticsLegRepository())
 
     def get_queryset(self):
-        return self.service.list_qs().order_by("etapa", "desde", "hasta", "tipo")
+        qs = self.service.list_qs()
+        q = (self.request.query_params.get("q") or self.request.query_params.get("nombre") or "").strip()
+        if q:
+            qs = qs.filter(Q(desde__icontains=q) | Q(hasta__icontains=q))
+        return qs.order_by("etapa", "desde", "hasta", "tipo")
 
     def perform_create(self, serializer):
         obj = self.service.create(serializer.validated_data)
@@ -152,7 +168,11 @@ class ClientViewSet(BaseCatalogViewSet):
         self.service = ClientService(repo=ClientRepository())
 
     def get_queryset(self):
-        return self.service.list_qs().order_by("nombre")
+        qs = self.service.list_qs()
+        q = (self.request.query_params.get("q") or self.request.query_params.get("nombre") or "").strip()
+        if q:
+            qs = qs.filter(nombre__icontains=q)
+        return qs.order_by("nombre")
 
     def perform_create(self, serializer):
         obj = self.service.create(serializer.validated_data)
@@ -173,7 +193,11 @@ class PreTaxChargeViewSet(BaseCatalogViewSet):
         self.service = PreTaxChargeService(repo=PreTaxChargeRepository())
 
     def get_queryset(self):
-        return self.service.list_qs().order_by("nombre")
+        qs = self.service.list_qs()
+        q = (self.request.query_params.get("q") or self.request.query_params.get("nombre") or "").strip()
+        if q:
+            qs = qs.filter(nombre__icontains=q)
+        return qs.order_by("nombre")
 
     def perform_create(self, serializer):
         obj = self.service.create(serializer.validated_data)

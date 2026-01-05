@@ -1,9 +1,9 @@
 import { apiClient } from './client'
 import type { PreTaxCharge, PreTaxChargeCreatePayload, PreTaxChargeUpdatePayload, PaginatedResponse } from './types'
 
-export async function fetchPreTaxCharges(params: { page?: number; pageSize?: number } = {}): Promise<PaginatedResponse<PreTaxCharge>> {
+export async function fetchPreTaxCharges(params: { page?: number; pageSize?: number; q?: string} = {}): Promise<PaginatedResponse<PreTaxCharge>> {
   const res = await apiClient.get<PaginatedResponse<PreTaxCharge>>('/api/catalog/pretax-charges/', {
-    params: { page: params.page, page_size: params.pageSize }
+    params: { page: params.page, page_size: params.pageSize, q: params.q }
   })
   return res.data
 }

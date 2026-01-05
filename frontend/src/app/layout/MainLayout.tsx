@@ -38,47 +38,53 @@ const MainLayout: React.FC = () => {
             Inicio
           </NavLink>
 
-          <div className="mt-2 mb-1 text-muted small">Recursos</div>
-
-          <NavLink to="/machines" className={linkClass}>
-            Machines
-          </NavLink>
-
-          <NavLink to="/accessories" className={linkClass}>
-            Accessories
-          </NavLink>
-
-          <NavLink to="/logistics-legs" className={linkClass}>
-            Logistics Legs
-          </NavLink>
-
-          <NavLink to="/taxes" className={linkClass}>
-            Taxes
-          </NavLink>
+          <div className="mt-2 mb-1 text-muted small">Catálogo</div>
 
           <NavLink to="/clients" className={linkClass}>
-            Clients
+            Clientes
           </NavLink>
 
           <NavLink to="/pretax-charges" className={linkClass}>
-            PreTax Charges
+            Cargas Pre Impuestos
           </NavLink>
 
+          <NavLink to="/taxes" className={linkClass}>
+            Impuestos
+          </NavLink>
+
+          <NavLink to="/logistics-legs" className={linkClass}>
+            Logística
+          </NavLink>
+
+          <NavLink to="/accessories" className={linkClass}>
+            Accesorios
+          </NavLink>
+
+          <NavLink to="/machines" className={linkClass}>
+            Maquinaria
+          </NavLink>
+
+          <div className="mt-3 mb-1 text-muted small">Operaciones</div>
+
           <NavLink to="/budgets" className={linkClass}>
-            Bugdets
+            Presupuestos
           </NavLink>
 
           <NavLink to="/units" className={linkClass}>
-            Units
+            Unidades
           </NavLink>
 
           <NavLink to="/payments" className={linkClass}>
-            Payments
+            Pagos
           </NavLink>
 
+          <div className="mt-3 mb-1 text-muted small">Reportes</div>
+
           <NavLink to="/reports/finance" className={linkClass}>
-            Finances
+            Finanzas
           </NavLink>
+
+         
         </div>
       </aside>
 

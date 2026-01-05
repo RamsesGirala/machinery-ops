@@ -1,12 +1,13 @@
 import { apiClient } from './client'
 import type { Accessory, AccessoryCreatePayload, AccessoryUpdatePayload, PaginatedResponse } from './types'
 
-export async function fetchAccessories(params: { page?: number; pageSize?: number } = {}): Promise<PaginatedResponse<Accessory>> {
+export async function fetchAccessories(params: { page?: number; pageSize?: number; q?: string } = {}): Promise<PaginatedResponse<Accessory>> {
   const res = await apiClient.get<PaginatedResponse<Accessory>>('/api/catalog/accessories/', {
-    params: { page: params.page, page_size: params.pageSize }
+    params: { page: params.page, page_size: params.pageSize, q: params.q }
   })
   return res.data
 }
+
 
 export async function fetchAccessoriesAll(): Promise<Accessory[]> {
   const res = await apiClient.get<Accessory[]>('/api/catalog/accessories/all/')

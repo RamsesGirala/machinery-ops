@@ -1,9 +1,9 @@
 import { apiClient } from './client'
 import type { Client, ClientCreatePayload, ClientUpdatePayload, PaginatedResponse } from './types'
 
-export async function fetchClients(params: { page?: number; pageSize?: number } = {}): Promise<PaginatedResponse<Client>> {
+export async function fetchClients(params: { page?: number; pageSize?: number; q?: string } = {}): Promise<PaginatedResponse<Client>> {
   const res = await apiClient.get<PaginatedResponse<Client>>('/api/catalog/clients/', {
-    params: { page: params.page, page_size: params.pageSize }
+    params: { page: params.page, page_size: params.pageSize, q: params.q }
   })
   return res.data
 }
