@@ -84,23 +84,36 @@ export type BudgetUpdatePayload = BudgetCreatePayload & {
   notas?: string
 }
 
+export type RevenuePaymentIn = {
+  monto: string
+  metodo_pago: 'TRANSFERENCIA' | 'TARJETA_CREDITO' | 'CHEQUE'
+  fecha_prevista: string
+  descripcion?: string
+}
+
 export type MarkRentedPayload = {
-  inicio_year: number
-  inicio_month: number
-  retorno_estimada_year: number
-  retorno_estimada_month: number
-  monto_mensual: string
+  cliente_id: number
+  rental_tipo: 'MENSUAL' | 'SEMANAL' | 'DIARIO'
+  rental_inicio: string
+  rental_fin_estimado: string
+  monto_unitario: string
+  metodo_pago: 'TRANSFERENCIA' | 'TARJETA_CREDITO' | 'CHEQUE'
+  pago_unico?: boolean
+  payments?: RevenuePaymentIn[]
   notas?: string
 }
 
 export type FinishRentalPayload = {
-  retorno_real_year: number
-  retorno_real_month: number
+  rental_fin_real: string
 }
 
 export type MarkSoldPayload = {
-  fecha_venta: string
-  monto_total: string
-  cliente_texto?: string
+  cliente_id: number
+  fecha_operacion: string
+  monto_total_final: string
+  metodo_pago: 'TRANSFERENCIA' | 'TARJETA_CREDITO' | 'CHEQUE'
+  cheques_cuotas?: number
+  payments?: RevenuePaymentIn[]
   notas?: string
 }
+

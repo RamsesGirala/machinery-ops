@@ -153,17 +153,20 @@ export interface PurchasedUnit {
 export interface RevenueEventForUnit {
   id: number
   tipo: string
-  fecha: string
-  monto_total: string
-  monto_mensual: string | null
-  notas: string
+  cliente: { id: number; nombre: string }
 
-  inicio_year: number | null
-  inicio_month: number | null
-  retorno_estimada_year: number | null
-  retorno_estimada_month: number | null
-  retorno_real_year: number | null
-  retorno_real_month: number | null
+  fecha_operacion: string | null
+
+  rental_tipo: string | null
+  rental_inicio: string | null
+  rental_fin_estimado: string | null
+  rental_fin_real: string | null
+
+  monto_unitario: string | null
+  monto_total_final: string
+
+  pagos_pendientes: number
+  pagos_cobrados: number
 
   created_at: string
   updated_at: string

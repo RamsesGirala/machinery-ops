@@ -8,24 +8,7 @@ import UnitLifecycleModal from '../../components/units/UnitLifecycleModal'
 import { useUnitLifecycleModal } from '../../hooks/useUnitLifecycleModal'
 import { formatUSD } from '../../utils/money'
 
-function ym(ev: RevenueEventForUnit, which: 'inicio' | 'est' | 'real'): string {
-  const y =
-    which === 'inicio'
-      ? ev.inicio_year
-      : which === 'est'
-      ? ev.retorno_estimada_year
-      : ev.retorno_real_year
-  const m =
-    which === 'inicio'
-      ? ev.inicio_month
-      : which === 'est'
-      ? ev.retorno_estimada_month
-      : ev.retorno_real_month
 
-  if (!y || !m) return '—'
-  const mm = String(m).padStart(2, '0')
-  return `${y}-${mm}`
-}
 
 export default function UnitDetailPage() {
   const { id } = useParams()
@@ -148,11 +131,21 @@ export default function UnitDetailPage() {
                     <div className="d-flex flex-wrap gap-3">
                       <div>
                         <div className="text-muted small">Fecha</div>
-                        <div className="fw-semibold">{data.venta.fecha}</div>
+                        <div className="fw-semibold">{data.venta.fecha_operacion ?? '—'}</div>
                       </div>
                       <div>
                         <div className="text-muted small">Total</div>
-                        <div className="fw-semibold">{formatUSD(data.venta.monto_total)}</div>
+                        <div className="fw-semibold">{formatUSD(data.venta.monto_total_final)}</div>
+                      </div>
+                      <div>
+                        <div className="text-muted small">Cliente</div>
+                        <div className="fw-semibold">{data.venta.cliente?.nombre ?? '—'}</div>
+                      </div>
+                      <div>
+                        <div className="text-muted small">Pagos</div>
+                        <div className="fw-semibold">
+                          Pendientes: {data.venta.pagos_pendientes} · Cobrados: {data.venta.pagos_cobrados}
+                        </div>
                       </div>
                     </div>
                     {data.venta.notas ? <div className="text-muted small mt-2">{data.venta.notas}</div> : null}
@@ -175,10 +168,12 @@ export default function UnitDetailPage() {
                       <thead>
                         <tr>
                           <th>Inicio</th>
-                          <th>Est.</th>
-                          <th>Real</th>
-                          <th className="text-end">Mensual</th>
+                          <th>Fin est.</th>
+                          <th>Fin real</th>
+                          <th>Tipo</th>
+                          <th className="text-end">Unitario</th>
                           <th className="text-end">Total</th>
+                          <th>Pagos</th>
                           <th>Estado</th>
                         </tr>
                       </thead>
@@ -187,14 +182,13 @@ export default function UnitDetailPage() {
                           const activo = !a.retorno_real_year || !a.retorno_real_month
                           return (
                             <tr key={a.id}>
-                              <td>{ym(a, 'inicio')}</td>
-                              <td>{ym(a, 'est')}</td>
-                              <td>{ym(a, 'real')}</td>
-                              <td className="text-end">{formatUSD(a.monto_mensual)}</td>
-                              <td className="text-end">{formatUSD(a.monto_total)}</td>
-                              <td>
-                                {activo ? <span className="badge text-bg-primary">Activo</span> : <span className="badge text-bg-secondary">Finalizado</span>}
-                              </td>
+                              <td>{a.rental_inicio ?? '—'}</td>
+                              <td>{a.rental_fin_estimado ?? '—'}</td>
+                              <td>{a.rental_fin_real ?? '—'}</td>
+                              <td>{a.rental_tipo ?? '—'}</td>
+                              <td className="text-end">{formatUSD(a.monto_unitario)}</td>
+                              <td className="text-end">{formatUSD(a.monto_total_final)}</td>
+                              <td>{a.pagos_pendientes} / {a.pagos_cobrados}</td>
                             </tr>
                           )
                         })}

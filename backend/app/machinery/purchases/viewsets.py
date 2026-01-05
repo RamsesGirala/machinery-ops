@@ -63,11 +63,14 @@ class PurchasedUnitViewSet(
 
         UnitLifecycleService.mark_rented(
             unit_id=int(pk),
-            inicio_year=ser.validated_data["inicio_year"],
-            inicio_month=ser.validated_data["inicio_month"],
-            retorno_estimada_year=ser.validated_data["retorno_estimada_year"],
-            retorno_estimada_month=ser.validated_data["retorno_estimada_month"],
-            monto_mensual=ser.validated_data["monto_mensual"],
+            cliente_id=ser.validated_data["cliente_id"],
+            rental_tipo=ser.validated_data["rental_tipo"],
+            rental_inicio=ser.validated_data["rental_inicio"],
+            rental_fin_estimado=ser.validated_data["rental_fin_estimado"],
+            monto_unitario=ser.validated_data["monto_unitario"],
+            metodo_pago=ser.validated_data["metodo_pago"],
+            pago_unico=ser.validated_data.get("pago_unico", False),
+            payments=ser.validated_data.get("payments"),
             notas=ser.validated_data.get("notas", ""),
         )
         obj = self.get_queryset().get(pk=int(pk))
@@ -80,8 +83,7 @@ class PurchasedUnitViewSet(
 
         UnitLifecycleService.finish_rental(
             unit_id=int(pk),
-            retorno_real_year=ser.validated_data["retorno_real_year"],
-            retorno_real_month=ser.validated_data["retorno_real_month"],
+            rental_fin_real=ser.validated_data["rental_fin_real"],
         )
         obj = self.get_queryset().get(pk=int(pk))
         return Response(PurchasedUnitDetailSerializer(obj).data)
@@ -93,10 +95,14 @@ class PurchasedUnitViewSet(
 
         UnitLifecycleService.mark_sold(
             unit_id=int(pk),
-            fecha_venta=ser.validated_data["fecha_venta"],
-            monto_total=ser.validated_data["monto_total"],
-            cliente_texto=ser.validated_data.get("cliente_texto", ""),
+            cliente_id=ser.validated_data["cliente_id"],
+            fecha_operacion=ser.validated_data["fecha_operacion"],
+            monto_total_final=ser.validated_data["monto_total_final"],
+            metodo_pago=ser.validated_data["metodo_pago"],
+            payments=ser.validated_data.get("payments"),
+            cheques_cuotas=ser.validated_data.get("cheques_cuotas", 1),
             notas=ser.validated_data.get("notas", ""),
         )
+
         obj = self.get_queryset().get(pk=int(pk))
         return Response(PurchasedUnitDetailSerializer(obj).data)

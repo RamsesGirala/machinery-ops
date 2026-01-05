@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
-from machinery.models import PurchasedUnit, BudgetItemAccessory, RevenueType
+from machinery.models import PurchasedUnit, BudgetItemAccessory, RevenueType, RentalTipo, PaymentMethod
 
 
 class PurchasedUnitAccessorySerializer(serializers.ModelSerializer):
@@ -49,18 +49,21 @@ class PurchasedUnitListSerializer(serializers.ModelSerializer):
 class RevenueEventForUnitSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     tipo = serializers.CharField()
-    fecha = serializers.DateField()
-    monto_total = serializers.CharField()
-    monto_mensual = serializers.CharField(allow_null=True)
-    notas = serializers.CharField()
 
-    # Mes/Año (para alquileres; para ventas lo dejamos igual usando fecha)
-    inicio_year = serializers.IntegerField(allow_null=True)
-    inicio_month = serializers.IntegerField(allow_null=True)
-    retorno_estimada_year = serializers.IntegerField(allow_null=True)
-    retorno_estimada_month = serializers.IntegerField(allow_null=True)
-    retorno_real_year = serializers.IntegerField(allow_null=True)
-    retorno_real_month = serializers.IntegerField(allow_null=True)
+    cliente = serializers.DictField()  # {id,nombre}
+
+    fecha_operacion = serializers.DateField(allow_null=True)
+
+    rental_tipo = serializers.CharField(allow_null=True)
+    rental_inicio = serializers.DateField(allow_null=True)
+    rental_fin_estimado = serializers.DateField(allow_null=True)
+    rental_fin_real = serializers.DateField(allow_null=True)
+
+    monto_unitario = serializers.CharField(allow_null=True)
+    monto_total_final = serializers.CharField()
+
+    pagos_pendientes = serializers.IntegerField()
+    pagos_cobrados = serializers.IntegerField()
 
     created_at = serializers.DateTimeField()
     updated_at = serializers.DateTimeField()
@@ -107,28 +110,22 @@ class PurchasedUnitDetailSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def _map_revenue(ev):
-        inicio_year = ev.fecha.year if ev.tipo == RevenueType.ALQUILER else None
-        inicio_month = ev.fecha.month if ev.tipo == RevenueType.ALQUILER else None
-
-        re_y = ev.fecha_retorno_estimada.year if ev.fecha_retorno_estimada else None
-        re_m = ev.fecha_retorno_estimada.month if ev.fecha_retorno_estimada else None
-
-        rr_y = ev.fecha_retorno_real.year if ev.fecha_retorno_real else None
-        rr_m = ev.fecha_retorno_real.month if ev.fecha_retorno_real else None
+        pagos_pendientes = ev.payments.filter(cobrado=False).count()
+        pagos_cobrados = ev.payments.filter(cobrado=True).count()
 
         data = {
             "id": ev.id,
             "tipo": ev.tipo,
-            "fecha": ev.fecha,
-            "monto_total": str(ev.monto_total),
-            "monto_mensual": str(ev.monto_mensual) if ev.monto_mensual is not None else None,
-            "notas": ev.notas or "",
-            "inicio_year": inicio_year,
-            "inicio_month": inicio_month,
-            "retorno_estimada_year": re_y,
-            "retorno_estimada_month": re_m,
-            "retorno_real_year": rr_y,
-            "retorno_real_month": rr_m,
+            "cliente": {"id": ev.cliente_id, "nombre": ev.cliente.nombre},
+            "fecha_operacion": ev.fecha_operacion,
+            "rental_tipo": ev.rental_tipo,
+            "rental_inicio": ev.rental_inicio,
+            "rental_fin_estimado": ev.rental_fin_estimado,
+            "rental_fin_real": ev.rental_fin_real,
+            "monto_unitario": str(ev.monto_unitario) if ev.monto_unitario is not None else None,
+            "monto_total_final": str(ev.monto_total_final),
+            "pagos_pendientes": pagos_pendientes,
+            "pagos_cobrados": pagos_cobrados,
             "created_at": ev.created_at,
             "updated_at": ev.updated_at,
         }
@@ -136,9 +133,9 @@ class PurchasedUnitDetailSerializer(serializers.ModelSerializer):
 
     def get_venta(self, obj):
         rels = (
-            obj.revenue_usos.select_related("revenue_event")
+            obj.revenue_usos.select_related("revenue_event", "revenue_event__cliente")
             .filter(revenue_event__tipo=RevenueType.VENTA)
-            .order_by("-revenue_event__fecha", "-revenue_event__created_at")
+            .order_by("-revenue_event__fecha_operacion", "-revenue_event__created_at")
         )
         rel = rels.first()
         if not rel:
@@ -147,40 +144,50 @@ class PurchasedUnitDetailSerializer(serializers.ModelSerializer):
 
     def get_alquileres(self, obj):
         rels = (
-            obj.revenue_usos.select_related("revenue_event")
+            obj.revenue_usos.select_related("revenue_event", "revenue_event__cliente")
             .filter(revenue_event__tipo=RevenueType.ALQUILER)
-            .order_by("-revenue_event__fecha", "-revenue_event__created_at")
+            .order_by("-revenue_event__rental_inicio", "-revenue_event__created_at")
         )
         return [self._map_revenue(r.revenue_event) for r in rels]
 
 
+class RevenuePaymentInSerializer(serializers.Serializer):
+    monto = serializers.DecimalField(max_digits=14, decimal_places=2)
+    metodo_pago = serializers.ChoiceField(choices=PaymentMethod.choices)
+    fecha_prevista = serializers.DateField()
+    descripcion = serializers.CharField(required=False, allow_blank=True, default="")
+
 class UnitMarkRentedSerializer(serializers.Serializer):
-    inicio_year = serializers.IntegerField(min_value=2000, max_value=2100)
-    inicio_month = serializers.IntegerField(min_value=1, max_value=12)
+    cliente_id = serializers.IntegerField()
+    rental_tipo = serializers.ChoiceField(choices=RentalTipo.choices)
 
-    retorno_estimada_year = serializers.IntegerField(min_value=2000, max_value=2100)
-    retorno_estimada_month = serializers.IntegerField(min_value=1, max_value=12)
+    rental_inicio = serializers.DateField()
+    rental_fin_estimado = serializers.DateField()
 
-    monto_mensual = serializers.DecimalField(max_digits=14, decimal_places=2)
+    monto_unitario = serializers.DecimalField(max_digits=14, decimal_places=2)
+
+    metodo_pago = serializers.ChoiceField(choices=PaymentMethod.choices)
+    pago_unico = serializers.BooleanField(required=False, default=False)
+
+    payments = RevenuePaymentInSerializer(many=True, required=False)
+
     notas = serializers.CharField(required=False, allow_blank=True, default="")
 
     def validate(self, attrs):
-        sy, sm = attrs["inicio_year"], attrs["inicio_month"]
-        ey, em = attrs["retorno_estimada_year"], attrs["retorno_estimada_month"]
-        start = sy * 12 + sm
-        end = ey * 12 + em
-        if end < start:
-            raise serializers.ValidationError("El retorno estimado no puede ser anterior al inicio.")
+        if attrs["rental_fin_estimado"] < attrs["rental_inicio"]:
+            raise serializers.ValidationError("La fecha fin estimada no puede ser anterior al inicio.")
         return attrs
 
-
 class UnitFinishRentalSerializer(serializers.Serializer):
-    retorno_real_year = serializers.IntegerField(min_value=2000, max_value=2100)
-    retorno_real_month = serializers.IntegerField(min_value=1, max_value=12)
-
+    rental_fin_real = serializers.DateField()
 
 class UnitMarkSoldSerializer(serializers.Serializer):
-    fecha_venta = serializers.DateField()
-    monto_total = serializers.DecimalField(max_digits=14, decimal_places=2)
-    cliente_texto = serializers.CharField(max_length=200, required=False, allow_blank=True, default="")
+    cliente_id = serializers.IntegerField()
+    fecha_operacion = serializers.DateField()
+    monto_total_final = serializers.DecimalField(max_digits=14, decimal_places=2)
+
+    metodo_pago = serializers.ChoiceField(choices=PaymentMethod.choices)
+    payments = RevenuePaymentInSerializer(many=True, required=False)
+    cheques_cuotas = serializers.IntegerField(required=False, min_value=1, default=1)
+
     notas = serializers.CharField(required=False, allow_blank=True, default="")

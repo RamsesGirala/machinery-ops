@@ -72,6 +72,10 @@ const MainLayout: React.FC = () => {
             Units
           </NavLink>
 
+          <NavLink to="/payments" className={linkClass}>
+            Payments
+          </NavLink>
+
           <NavLink to="/reports/finance" className={linkClass}>
             Finances
           </NavLink>

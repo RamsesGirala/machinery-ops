@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import ConfirmModal from '../../components/global/ConfirmModal'
 import ErrorAlert from '../../components/global/ErrorAlert'
+import { fetchClientsAll } from '../../api/clientsApi'
+import type { Client } from '../../api/types/models'
 import { finishUnitRental, markUnitRented, markUnitSold } from '../../api/purchasedUnitsApi'
 import { FinishRentalPayload, MarkRentedPayload, MarkSoldPayload } from '../../api/types/payloads'
 import type { PurchasedUnitDetail, PurchasedUnit } from '../../api/types/models'
@@ -26,131 +28,156 @@ function toNumberSafe(v: any): number {
   return Number.isFinite(n) ? n : 0
 }
 
-function monthsInclusive(sy: number, sm: number, ey: number, em: number): number {
-  const start = sy * 12 + sm
-  const end = ey * 12 + em
-  return end >= start ? (end - start) + 1 : 0
+function daysInclusive(start: string, end: string): number {
+  const s = new Date(start)
+  const e = new Date(end)
+  if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return 0
+  const diff = Math.floor((e.getTime() - s.getTime()) / 86400000)
+  return diff >= 0 ? diff + 1 : 0
 }
 
-function nowYM() {
-  const d = new Date()
-  return { y: d.getFullYear(), m: d.getMonth() + 1 }
+function weeksInclusive(start: string, end: string): number {
+  const d = daysInclusive(start, end)
+  return d <= 0 ? 0 : Math.floor((d - 1) / 7) + 1
 }
+
+function monthsInclusiveDates(start: string, end: string): number {
+  const s = new Date(start)
+  const e = new Date(end)
+  if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return 0
+  const sm = s.getFullYear() * 12 + (s.getMonth() + 1)
+  const em = e.getFullYear() * 12 + (e.getMonth() + 1)
+  return em >= sm ? (em - sm) + 1 : 0
+}
+
 
 export default function UnitLifecycleModal({ show, mode, unit, onClose, onSuccess }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
+  const [clients, setClients] = useState<Client[]>([])
   const cost = useMemo(() => toNumberSafe((unit as any)?.total_compra), [unit])
 
-  const [rentForm, setRentForm] = useState<MarkRentedPayload>(() => {
-    const { y, m } = nowYM()
-    return {
-      inicio_year: y,
-      inicio_month: m,
-      retorno_estimada_year: y,
-      retorno_estimada_month: m,
-      monto_mensual: '',
-      notas: '',
-    }
-  })
+  const [rentForm, setRentForm] = useState<MarkRentedPayload>(() => ({
+    cliente_id: 0,
+    rental_tipo: 'MENSUAL',
+    rental_inicio: new Date().toISOString().slice(0, 10),
+    rental_fin_estimado: new Date().toISOString().slice(0, 10),
+    monto_unitario: '',
+    metodo_pago: 'TRANSFERENCIA',
+    pago_unico: false,
+    notas: '',
+  }))
 
-  const [finishForm, setFinishForm] = useState<FinishRentalPayload>(() => {
-    const { y, m } = nowYM()
-    return { retorno_real_year: y, retorno_real_month: m }
-  })
+  const [finishForm, setFinishForm] = useState<FinishRentalPayload>(() => ({
+    rental_fin_real: new Date().toISOString().slice(0, 10),
+  }))
 
   const [sellForm, setSellForm] = useState<MarkSoldPayload>(() => ({
-    fecha_venta: new Date().toISOString().slice(0, 10),
-    monto_total: '',
+    cliente_id: 0,
+    fecha_operacion: new Date().toISOString().slice(0, 10),
+    monto_total_final: '',
+    metodo_pago: 'TRANSFERENCIA',
+    cheques_cuotas: 1,
     notas: '',
   }))
 
   // Cada vez que abrimos o cambia la unidad, sugerimos valores iniciales
   useEffect(() => {
     if (!show || !unit) return
+
+    ;(async () => {
+      try {
+        const cs = await fetchClientsAll()
+        setClients(cs)
+      } catch {
+        // silencioso
+      }
+    })()
+
     setError(null)
 
-    const { y, m } = nowYM()
+    const today = new Date().toISOString().slice(0, 10)
 
     if (mode === 'rent') {
       const suggestedMonthly = suggestMonthlyRent(cost)
       setRentForm({
-        inicio_year: y,
-        inicio_month: m,
-        retorno_estimada_year: y,
-        retorno_estimada_month: m,
-        monto_mensual: suggestedMonthly ? String(Math.round(suggestedMonthly)) : '',
+        cliente_id: 0,
+        rental_tipo: 'MENSUAL',
+        rental_inicio: today,
+        rental_fin_estimado: today,
+        monto_unitario: suggestedMonthly ? String(Math.round(suggestedMonthly)) : '',
+        metodo_pago: 'TRANSFERENCIA',
+        pago_unico: false,
         notas: '',
       })
     }
 
     if (mode === 'finish') {
-      setFinishForm({ retorno_real_year: y, retorno_real_month: m })
+      setFinishForm({ rental_fin_real: today })
     }
 
     if (mode === 'sell') {
       const suggestedSale = suggestSaleTotal(cost)
       setSellForm({
-        fecha_venta: new Date().toISOString().slice(0, 10),
-        monto_total: suggestedSale ? String(Math.round(suggestedSale)) : '',
+        cliente_id: 0,
+        fecha_operacion: today,
+        monto_total_final: suggestedSale ? String(Math.round(suggestedSale)) : '',
+        metodo_pago: 'TRANSFERENCIA',
+        cheques_cuotas: 1,
         notas: '',
       })
     }
   }, [show, (unit as any)?.id, mode, cost])
 
-  const title = useMemo(() => {
-    if (mode === 'rent') return 'Alquilar unidad'
-    if (mode === 'finish') return 'Finalizar alquiler'
-    return 'Vender unidad'
-  }, [mode])
-
-  const confirmText = useMemo(() => {
-    if (mode === 'rent') return 'Alquilar'
-    if (mode === 'finish') return 'Finalizar'
-    return 'Vender'
-  }, [mode])
-
   const rentPreview = useMemo(() => {
-    const meses = monthsInclusive(
-      Number(rentForm.inicio_year),
-      Number(rentForm.inicio_month),
-      Number(rentForm.retorno_estimada_year),
-      Number(rentForm.retorno_estimada_month),
-    )
-    const mensual = toNumberSafe(rentForm.monto_mensual)
-    const total = meses * mensual
-    return { meses, total }
-  }, [rentForm])
+    const unitPrice = toNumberSafe(rentForm.monto_unitario)
+
+    let n = 0
+    if (rentForm.rental_tipo === 'MENSUAL') {
+      n = monthsInclusiveDates(rentForm.rental_inicio, rentForm.rental_fin_estimado)
+    } else if (rentForm.rental_tipo === 'SEMANAL') {
+      n = weeksInclusive(rentForm.rental_inicio, rentForm.rental_fin_estimado)
+    } else {
+      n = daysInclusive(rentForm.rental_inicio, rentForm.rental_fin_estimado)
+    }
+
+    const total = n * unitPrice
+    return { n, total }
+  }, [rentForm.rental_tipo, rentForm.rental_inicio, rentForm.rental_fin_estimado, rentForm.monto_unitario])
+
 
   async function onConfirm() {
-    if (!unit) return
-    try {
-      setLoading(true)
-      setError(null)
+      if (!unit) return
+      try {
+        setLoading(true)
+        setError(null)
 
       if (mode === 'rent') {
         await markUnitRented((unit as any).id, {
-          ...rentForm,
-          inicio_year: Number(rentForm.inicio_year),
-          inicio_month: Number(rentForm.inicio_month),
-          retorno_estimada_year: Number(rentForm.retorno_estimada_year),
-          retorno_estimada_month: Number(rentForm.retorno_estimada_month),
-          monto_mensual: String(rentForm.monto_mensual ?? ''),
+          cliente_id: Number(rentForm.cliente_id),
+          rental_tipo: rentForm.rental_tipo,
+          rental_inicio: rentForm.rental_inicio,
+          rental_fin_estimado: rentForm.rental_fin_estimado,
+          monto_unitario: String(rentForm.monto_unitario ?? ''),
+          metodo_pago: rentForm.metodo_pago,
+          pago_unico: Boolean(rentForm.pago_unico),
           notas: rentForm.notas ?? '',
         })
       } else if (mode === 'finish') {
         await finishUnitRental((unit as any).id, {
-          retorno_real_year: Number(finishForm.retorno_real_year),
-          retorno_real_month: Number(finishForm.retorno_real_month),
+          rental_fin_real: finishForm.rental_fin_real,
         })
       } else {
-        await markUnitSold((unit as any).id, {
-          fecha_venta: sellForm.fecha_venta,
-          monto_total: String(sellForm.monto_total ?? ''),
-          notas: sellForm.notas ?? '',
-        })
-      }
+          await markUnitSold((unit as any).id, {
+            cliente_id: Number(sellForm.cliente_id),
+            fecha_operacion: sellForm.fecha_operacion,
+            monto_total_final: String(sellForm.monto_total_final ?? ''),
+            metodo_pago: sellForm.metodo_pago,
+            cheques_cuotas: Number(sellForm.cheques_cuotas ?? 1),
+            notas: sellForm.notas ?? '',
+          })
+        }
+
 
       onSuccess()
       onClose()
@@ -160,6 +187,17 @@ export default function UnitLifecycleModal({ show, mode, unit, onClose, onSucces
       setLoading(false)
     }
   }
+
+  const title =
+    mode === 'rent' ? 'Alquilar unidad'
+    : mode === 'finish' ? 'Finalizar alquiler'
+    : 'Vender unidad'
+
+  const confirmText =
+    mode === 'rent' ? 'Alquilar'
+    : mode === 'finish' ? 'Marcar devuelta'
+    : 'Vender'
+
 
   const body = (
     <>
@@ -181,63 +219,53 @@ export default function UnitLifecycleModal({ show, mode, unit, onClose, onSucces
 
       {mode === 'rent' ? (
         <div className="row g-2">
-          <div className="col-6 col-md-3">
-            <label className="form-label">Inicio · Año</label>
-            <input
-              className="form-control"
-              type="number"
-              value={rentForm.inicio_year}
-              onChange={(e) => setRentForm({ ...rentForm, inicio_year: Number(e.target.value) })}
-              disabled={loading}
-            />
-          </div>
-          <div className="col-6 col-md-3">
-            <label className="form-label">Inicio · Mes</label>
-            <input
-              className="form-control"
-              type="number"
-              min={1}
-              max={12}
-              value={rentForm.inicio_month}
-              onChange={(e) => setRentForm({ ...rentForm, inicio_month: Number(e.target.value) })}
-              disabled={loading}
-            />
+          <div className="col-12">
+            <label className="form-label">Cliente</label>
+            <select className="form-select" value={rentForm.cliente_id} onChange={(e) => setRentForm({ ...rentForm, cliente_id: Number(e.target.value) })} disabled={loading}>
+              <option value={0}>— Seleccionar —</option>
+              {clients.map((c) => (
+                <option key={c.id} value={c.id}>{c.nombre}</option>
+              ))}
+            </select>
           </div>
 
-          <div className="col-6 col-md-3">
-            <label className="form-label">Retorno est. · Año</label>
-            <input
-              className="form-control"
-              type="number"
-              value={rentForm.retorno_estimada_year}
-              onChange={(e) => setRentForm({ ...rentForm, retorno_estimada_year: Number(e.target.value) })}
-              disabled={loading}
-            />
-          </div>
-          <div className="col-6 col-md-3">
-            <label className="form-label">Retorno est. · Mes</label>
-            <input
-              className="form-control"
-              type="number"
-              min={1}
-              max={12}
-              value={rentForm.retorno_estimada_month}
-              onChange={(e) => setRentForm({ ...rentForm, retorno_estimada_month: Number(e.target.value) })}
-              disabled={loading}
-            />
+          <div className="col-6">
+            <label className="form-label">Inicio</label>
+            <input className="form-control" type="date" value={rentForm.rental_inicio} onChange={(e) => setRentForm({ ...rentForm, rental_inicio: e.target.value })} disabled={loading} />
           </div>
 
-          <div className="col-12 col-md-6">
-            <label className="form-label">Monto mensual</label>
-            <input
-              className="form-control"
-              type="number"
-              value={rentForm.monto_mensual}
-              onChange={(e) => setRentForm({ ...rentForm, monto_mensual: e.target.value })}
-              disabled={loading}
-            />
-            <div className="text-muted small mt-1">
-              Sugerido: {formatUSD(Math.round(suggestMonthlyRent(cost)))}
+          <div className="col-6">
+            <label className="form-label">Fin estimado</label>
+            <input className="form-control" type="date" value={rentForm.rental_fin_estimado} onChange={(e) => setRentForm({ ...rentForm, rental_fin_estimado: e.target.value })} disabled={loading} />
+          </div>
+
+          <div className="col-6">
+            <label className="form-label">Tipo</label>
+            <select className="form-select" value={rentForm.rental_tipo} onChange={(e) => setRentForm({ ...rentForm, rental_tipo: e.target.value as any })} disabled={loading}>
+              <option value="MENSUAL">Mensual</option>
+              <option value="SEMANAL">Semanal</option>
+              <option value="DIARIO">Diario</option>
+            </select>
+          </div>
+
+          <div className="col-6">
+            <label className="form-label">Monto unitario</label>
+            <input className="form-control" type="number" value={rentForm.monto_unitario} onChange={(e) => setRentForm({ ...rentForm, monto_unitario: e.target.value })} disabled={loading} />
+          </div>
+
+          <div className="col-6">
+            <label className="form-label">Método de pago</label>
+            <select className="form-select" value={rentForm.metodo_pago} onChange={(e) => setRentForm({ ...rentForm, metodo_pago: e.target.value as any })} disabled={loading}>
+              <option value="TRANSFERENCIA">Transferencia</option>
+              <option value="TARJETA_CREDITO">Tarjeta crédito</option>
+              <option value="CHEQUE">Cheque</option>
+            </select>
+          </div>
+
+          <div className="col-6 d-flex align-items-end">
+            <div className="form-check">
+              <input className="form-check-input" type="checkbox" checked={!!rentForm.pago_unico} onChange={(e) => setRentForm({ ...rentForm, pago_unico: e.target.checked })} disabled={loading} />
+              <label className="form-check-label">Pago único</label>
             </div>
           </div>
 
@@ -253,33 +281,22 @@ export default function UnitLifecycleModal({ show, mode, unit, onClose, onSucces
 
           <div className="col-12">
             <div className="text-muted small">
-              Total estimado: <b>{formatUSD(rentPreview.total)}</b> · Meses: <b>{rentPreview.meses}</b>
+              Total estimado: <b>{formatUSD(rentPreview.total)}</b> · Cant. períodos: <b>{rentPreview.n}</b>
             </div>
           </div>
+
         </div>
       ) : null}
 
       {mode === 'finish' ? (
         <div className="row g-2">
-          <div className="col-6 col-md-3">
-            <label className="form-label">Retorno real · Año</label>
+          <div className="col-12 col-md-4">
+            <label className="form-label">Fecha retorno real</label>
             <input
+              type="date"
               className="form-control"
-              type="number"
-              value={finishForm.retorno_real_year}
-              onChange={(e) => setFinishForm({ ...finishForm, retorno_real_year: Number(e.target.value) })}
-              disabled={loading}
-            />
-          </div>
-          <div className="col-6 col-md-3">
-            <label className="form-label">Retorno real · Mes</label>
-            <input
-              className="form-control"
-              type="number"
-              min={1}
-              max={12}
-              value={finishForm.retorno_real_month}
-              onChange={(e) => setFinishForm({ ...finishForm, retorno_real_month: Number(e.target.value) })}
+              value={finishForm.rental_fin_real}
+              onChange={(e) => setFinishForm({ ...finishForm, rental_fin_real: e.target.value })}
               disabled={loading}
             />
           </div>
@@ -292,15 +309,33 @@ export default function UnitLifecycleModal({ show, mode, unit, onClose, onSucces
         </div>
       ) : null}
 
+
       {mode === 'sell' ? (
         <div className="row g-2">
+          <div className="col-12">
+            <label className="form-label">Cliente</label>
+            <select
+              className="form-select"
+              value={sellForm.cliente_id}
+              onChange={(e) => setSellForm({ ...sellForm, cliente_id: Number(e.target.value) })}
+              disabled={loading}
+            >
+              <option value={0}>— Seleccionar —</option>
+              {clients.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div className="col-12 col-md-4">
             <label className="form-label">Fecha venta</label>
             <input
               className="form-control"
               type="date"
-              value={sellForm.fecha_venta}
-              onChange={(e) => setSellForm({ ...sellForm, fecha_venta: e.target.value })}
+              value={sellForm.fecha_operacion}
+              onChange={(e) => setSellForm({ ...sellForm, fecha_operacion: e.target.value })}
               disabled={loading}
             />
           </div>
@@ -310,8 +345,8 @@ export default function UnitLifecycleModal({ show, mode, unit, onClose, onSucces
             <input
               className="form-control"
               type="number"
-              value={sellForm.monto_total}
-              onChange={(e) => setSellForm({ ...sellForm, monto_total: e.target.value })}
+              value={sellForm.monto_total_final}
+              onChange={(e) => setSellForm({ ...sellForm, monto_total_final: e.target.value })}
               disabled={loading}
             />
             <div className="text-muted small mt-1">
@@ -320,6 +355,38 @@ export default function UnitLifecycleModal({ show, mode, unit, onClose, onSucces
           </div>
 
           <div className="col-12 col-md-4">
+            <label className="form-label">Método de pago</label>
+            <select
+              className="form-select"
+              value={sellForm.metodo_pago}
+              onChange={(e) => setSellForm({ ...sellForm, metodo_pago: e.target.value as any })}
+              disabled={loading}
+            >
+              <option value="TRANSFERENCIA">Transferencia</option>
+              <option value="TARJETA_CREDITO">Tarjeta crédito</option>
+              <option value="CHEQUE">Cheque</option>
+            </select>
+          </div>
+
+          {sellForm.metodo_pago === 'CHEQUE' ? (
+            <div className="col-12 col-md-4">
+              <label className="form-label">Cuotas (cheques)</label>
+              <input
+                className="form-control"
+                type="number"
+                min={1}
+                value={sellForm.cheques_cuotas ?? 1}
+                onChange={(e) => setSellForm({ ...sellForm, cheques_cuotas: Number(e.target.value || 1) })}
+                disabled={loading}
+              />
+              <div className="text-muted small mt-1">
+                Se generarán {sellForm.cheques_cuotas ?? 1} pagos iguales.
+              </div>
+            </div>
+          ) : null}
+
+
+          <div className="col-12">
             <label className="form-label">Notas</label>
             <input
               className="form-control"
@@ -330,6 +397,7 @@ export default function UnitLifecycleModal({ show, mode, unit, onClose, onSucces
           </div>
         </div>
       ) : null}
+
     </>
   )
 

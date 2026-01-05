@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
+from decimal import Decimal
+
 from django.db import transaction
 from django.utils import timezone
 
 from machinery.models import Budget, BudgetStatus, Purchase, PurchasedUnit, UnitStatus, RevenueEvent, RevenueType, \
-    RevenueEventUnit
+    RevenueEventUnit, PaymentMethod, RentalTipo, Client, RevenuePayment
 from machinery.shared.errors import DomainError, ErrorCodes
 
 
@@ -67,26 +69,178 @@ class PurchaseService:
 
 class UnitLifecycleService:
     @staticmethod
-    def _ym_to_date(*, year: int, month: int) -> date:
-        return date(int(year), int(month), 1)
+    def _days_inclusive(start: date, end: date) -> int:
+        if end < start:
+            return 0
+        return (end - start).days + 1
 
     @staticmethod
-    def _months_inclusive(*, start_year: int, start_month: int, end_year: int, end_month: int) -> int:
-        start = int(start_year) * 12 + int(start_month)
-        end = int(end_year) * 12 + int(end_month)
-        return (end - start) + 1
+    def _weeks_inclusive(start: date, end: date) -> int:
+        if end < start:
+            return 0
+        return ((end - start).days // 7) + 1
+
+    @staticmethod
+    def _months_inclusive(start: date, end: date) -> int:
+        if end < start:
+            return 0
+        return (end.year - start.year) * 12 + (end.month - start.month) + 1
+
+    @staticmethod
+    def _iter_month_starts(start: date, end: date):
+        # retorna date(YYYY,MM,1) desde start.month hasta end.month inclusive
+        cur = date(start.year, start.month, 1)
+        last = date(end.year, end.month, 1)
+        while cur <= last:
+            yield cur
+            # avanzar 1 mes
+            y = cur.year + (1 if cur.month == 12 else 0)
+            m = 1 if cur.month == 12 else (cur.month + 1)
+            cur = date(y, m, 1)
+
+    @staticmethod
+    def _build_payments_schedule(
+            *,
+            tipo: RevenueType,
+            metodo_pago: PaymentMethod,
+            fecha_operacion: date | None,
+            rental_tipo: RentalTipo | None,
+            rental_inicio: date | None,
+            rental_fin_estimado: date | None,
+            monto_unitario: Decimal | None,
+            monto_total_final: Decimal,
+            pago_unico: bool,
+            payments_override: list[dict] | None,
+            cheques_cuotas: int = 1,
+    ) -> list[dict]:
+        """
+        Devuelve una lista de dicts: {monto, metodo_pago, fecha_prevista, descripcion}
+        Reglas:
+          - Si payments_override viene => se usa tal cual.
+          - Si VENTA y no override:
+                TRANSFERENCIA/TARJETA => 1 pago en fecha_operacion por monto_total_final
+                CHEQUE => si no override, también 1 (pero en UI lo ideal es mandar override con cuotas)
+          - Si ALQUILER y no override:
+                si pago_unico => 1 pago en rental_inicio por monto_total_final
+                si no pago_unico => genera 1 pago por periodo (según rental_tipo) por monto_unitario
+        """
+        if payments_override:
+            return payments_override
+
+        out: list[dict] = []
+
+        if tipo == RevenueType.VENTA:
+            f = fecha_operacion or timezone.now().date()
+
+            # Si es CHEQUE y no mandaron payments override: generar N cuotas iguales
+            if metodo_pago == PaymentMethod.CHEQUE and cheques_cuotas and cheques_cuotas > 1:
+                n = int(cheques_cuotas)
+                base = (monto_total_final / Decimal(n)).quantize(Decimal("0.01"))
+                # Ajuste por redondeo: la última cuota absorbe la diferencia
+                total_base = base * Decimal(n)
+                diff = (monto_total_final - total_base).quantize(Decimal("0.01"))
+
+                for i in range(n):
+                    fecha = date(f.year + (f.month - 1 + i) // 12, ((f.month - 1 + i) % 12) + 1, min(f.day, 28))
+                    monto = base if i < n - 1 else (base + diff)
+                    out.append(
+                        {
+                            "monto": monto,
+                            "metodo_pago": metodo_pago,
+                            "fecha_prevista": fecha,
+                            "descripcion": f"Venta (cheque {i + 1}/{n})",
+                        }
+                    )
+                return out
+
+            # default: 1 pago
+            out.append(
+                {
+                    "monto": monto_total_final,
+                    "metodo_pago": metodo_pago,
+                    "fecha_prevista": f,
+                    "descripcion": "Venta",
+                }
+            )
+            return out
+
+        # ALQUILER
+        if not rental_inicio or not rental_fin_estimado or not rental_tipo or monto_unitario is None:
+            # por seguridad, no debería pasar (lo valida el serializer)
+            out.append(
+                {
+                    "monto": monto_total_final,
+                    "metodo_pago": metodo_pago,
+                    "fecha_prevista": timezone.now().date(),
+                    "descripcion": "Alquiler",
+                }
+            )
+            return out
+
+        if pago_unico:
+            out.append(
+                {
+                    "monto": monto_total_final,
+                    "metodo_pago": metodo_pago,
+                    "fecha_prevista": rental_inicio,
+                    "descripcion": "Alquiler (pago único)",
+                }
+            )
+            return out
+
+        if rental_tipo == RentalTipo.MENSUAL:
+            for d in UnitLifecycleService._iter_month_starts(rental_inicio, rental_fin_estimado):
+                out.append(
+                    {
+                        "monto": monto_unitario,
+                        "metodo_pago": metodo_pago,
+                        "fecha_prevista": d,
+                        "descripcion": "Alquiler mensual",
+                    }
+                )
+            return out
+
+        if rental_tipo == RentalTipo.SEMANAL:
+            cur = rental_inicio
+            while cur <= rental_fin_estimado:
+                out.append(
+                    {
+                        "monto": monto_unitario,
+                        "metodo_pago": metodo_pago,
+                        "fecha_prevista": cur,
+                        "descripcion": "Alquiler semanal",
+                    }
+                )
+                cur = cur + timedelta(days=7)
+            return out
+
+        # DIARIO
+        cur = rental_inicio
+        while cur <= rental_fin_estimado:
+            out.append(
+                {
+                    "monto": monto_unitario,
+                    "metodo_pago": metodo_pago,
+                    "fecha_prevista": cur,
+                    "descripcion": "Alquiler diario",
+                }
+            )
+            cur = cur + timedelta(days=1)
+        return out
 
     @staticmethod
     @transaction.atomic
     def mark_rented(
         *,
         unit_id: int,
-        inicio_year: int,
-        inicio_month: int,
-        retorno_estimada_year: int,
-        retorno_estimada_month: int,
-        monto_mensual,
-        cliente_texto: str = "",
+        cliente_id: int,
+        rental_tipo: str,
+        rental_inicio: date,
+        rental_fin_estimado: date,
+        monto_unitario: Decimal,
+        metodo_pago: str,
+        pago_unico: bool = False,
+        payments: list[dict] | None = None,
         notas: str = "",
     ) -> PurchasedUnit:
         unit = PurchasedUnit.objects.select_for_update().select_related("machine_base").get(pk=unit_id)
@@ -98,27 +252,59 @@ class UnitLifecycleService:
                 details={"unit_id": unit.id, "estado_actual": unit.estado},
             )
 
-        fecha_inicio = UnitLifecycleService._ym_to_date(year=inicio_year, month=inicio_month)
-        fecha_retorno_estimada = UnitLifecycleService._ym_to_date(year=retorno_estimada_year, month=retorno_estimada_month)
+        cliente = Client.objects.get(pk=cliente_id)
 
-        meses = UnitLifecycleService._months_inclusive(
-            start_year=inicio_year,
-            start_month=inicio_month,
-            end_year=retorno_estimada_year,
-            end_month=retorno_estimada_month,
-        )
-        monto_total = monto_mensual * meses
+        rt = RentalTipo(rental_tipo)
+        mp = PaymentMethod(metodo_pago)
+
+        # total esperado
+        if rt == RentalTipo.MENSUAL:
+            n = UnitLifecycleService._months_inclusive(rental_inicio, rental_fin_estimado)
+        elif rt == RentalTipo.SEMANAL:
+            n = UnitLifecycleService._weeks_inclusive(rental_inicio, rental_fin_estimado)
+        else:
+            n = UnitLifecycleService._days_inclusive(rental_inicio, rental_fin_estimado)
+
+        monto_total_final = (monto_unitario * Decimal(n)).quantize(Decimal("0.01"))
 
         ev = RevenueEvent.objects.create(
             tipo=RevenueType.ALQUILER,
-            fecha=fecha_inicio,
-            monto_mensual=monto_mensual,
-            monto_total=monto_total,
-            cliente_texto=cliente_texto or "",
-            fecha_retorno_estimada=fecha_retorno_estimada,
+            cliente=cliente,
+            fecha_operacion=None,
+            rental_tipo=rt,
+            rental_inicio=rental_inicio,
+            rental_fin_estimado=rental_fin_estimado,
+            rental_fin_real=None,
+            monto_unitario=monto_unitario,
+            monto_total_final=monto_total_final,
             notas=notas or "",
         )
+
         RevenueEventUnit.objects.create(revenue_event=ev, purchased_unit=unit)
+
+        schedule = UnitLifecycleService._build_payments_schedule(
+            tipo=RevenueType.ALQUILER,
+            metodo_pago=mp,
+            fecha_operacion=None,
+            rental_tipo=rt,
+            rental_inicio=rental_inicio,
+            rental_fin_estimado=rental_fin_estimado,
+            monto_unitario=monto_unitario,
+            monto_total_final=monto_total_final,
+            pago_unico=pago_unico,
+            payments_override=payments,
+        )
+
+        for p in schedule:
+            RevenuePayment.objects.create(
+                revenue_event=ev,
+                monto=p["monto"],
+                metodo_pago=p["metodo_pago"],
+                fecha_prevista=p["fecha_prevista"],
+                cobrado=False,
+                fecha_cobro_real=None,
+                descripcion=p.get("descripcion") or "",
+            )
 
         unit.estado = UnitStatus.ALQUILADA
         unit.save(update_fields=["estado"])
@@ -126,7 +312,7 @@ class UnitLifecycleService:
 
     @staticmethod
     @transaction.atomic
-    def finish_rental(*, unit_id: int, retorno_real_year: int, retorno_real_month: int) -> PurchasedUnit:
+    def finish_rental(*, unit_id: int, rental_fin_real: date) -> PurchasedUnit:
         unit = PurchasedUnit.objects.select_for_update().get(pk=unit_id)
 
         if unit.estado != UnitStatus.ALQUILADA:
@@ -141,9 +327,9 @@ class UnitLifecycleService:
             .filter(
                 purchased_unit=unit,
                 revenue_event__tipo=RevenueType.ALQUILER,
-                revenue_event__fecha_retorno_real__isnull=True,
+                revenue_event__rental_fin_real__isnull=True,
             )
-            .order_by("-revenue_event__fecha", "-revenue_event__created_at")
+            .order_by("-revenue_event__rental_inicio", "-revenue_event__created_at")
             .first()
         )
 
@@ -155,19 +341,23 @@ class UnitLifecycleService:
             )
 
         ev = rel.revenue_event
-        fecha_retorno_real = UnitLifecycleService._ym_to_date(year=retorno_real_year, month=retorno_real_month)
+        ev.rental_fin_real = rental_fin_real
 
-        # Recalculamos total en base al período real, usando el monto mensual guardado
-        meses = UnitLifecycleService._months_inclusive(
-            start_year=ev.fecha.year,
-            start_month=ev.fecha.month,
-            end_year=retorno_real_year,
-            end_month=retorno_real_month,
-        )
-        monto_mensual = ev.monto_mensual or 0
-        ev.fecha_retorno_real = fecha_retorno_real
-        ev.monto_total = monto_mensual * meses
-        ev.save(update_fields=["fecha_retorno_real", "monto_total"])
+        # recalcular total_final por periodo real (NO tocamos payments todavía; queda para etapa 2)
+        rt = ev.rental_tipo
+        inicio = ev.rental_inicio
+        mu = ev.monto_unitario or Decimal("0.00")
+
+        if rt and inicio:
+            if rt == RentalTipo.MENSUAL:
+                n = UnitLifecycleService._months_inclusive(inicio, rental_fin_real)
+            elif rt == RentalTipo.SEMANAL:
+                n = UnitLifecycleService._weeks_inclusive(inicio, rental_fin_real)
+            else:
+                n = UnitLifecycleService._days_inclusive(inicio, rental_fin_real)
+            ev.monto_total_final = (mu * Decimal(n)).quantize(Decimal("0.01"))
+
+        ev.save(update_fields=["rental_fin_real", "monto_total_final"])
 
         unit.estado = UnitStatus.DEPOSITO
         unit.save(update_fields=["estado"])
@@ -178,9 +368,12 @@ class UnitLifecycleService:
     def mark_sold(
         *,
         unit_id: int,
-        fecha_venta: date,
-        monto_total,
-        cliente_texto: str = "",
+        cliente_id: int,
+        fecha_operacion: date,
+        monto_total_final: Decimal,
+        metodo_pago: str,
+        cheques_cuotas: int = 1,
+        payments: list[dict] | None = None,
         notas: str = "",
     ) -> PurchasedUnit:
         unit = PurchasedUnit.objects.select_for_update().get(pk=unit_id)
@@ -192,15 +385,49 @@ class UnitLifecycleService:
                 details={"unit_id": unit.id, "estado_actual": unit.estado},
             )
 
+        cliente = Client.objects.get(pk=cliente_id)
+        mp = PaymentMethod(metodo_pago)
+
         ev = RevenueEvent.objects.create(
             tipo=RevenueType.VENTA,
-            fecha=fecha_venta,
-            monto_total=monto_total,
-            cliente_texto=cliente_texto or "",
+            cliente=cliente,
+            fecha_operacion=fecha_operacion,
+            rental_tipo=None,
+            rental_inicio=None,
+            rental_fin_estimado=None,
+            rental_fin_real=None,
+            monto_unitario=None,
+            monto_total_final=monto_total_final,
             notas=notas or "",
         )
         RevenueEventUnit.objects.create(revenue_event=ev, purchased_unit=unit)
 
+        schedule = UnitLifecycleService._build_payments_schedule(
+            tipo=RevenueType.VENTA,
+            metodo_pago=mp,
+            fecha_operacion=fecha_operacion,
+            rental_tipo=None,
+            rental_inicio=None,
+            rental_fin_estimado=None,
+            monto_unitario=None,
+            monto_total_final=monto_total_final,
+            pago_unico=True,
+            payments_override=payments,
+            cheques_cuotas=int(cheques_cuotas or 1),
+        )
+
+        for p in schedule:
+            RevenuePayment.objects.create(
+                revenue_event=ev,
+                monto=p["monto"],
+                metodo_pago=p["metodo_pago"],
+                fecha_prevista=p["fecha_prevista"],
+                cobrado=False,
+                fecha_cobro_real=None,
+                descripcion=p.get("descripcion") or "",
+            )
+
         unit.estado = UnitStatus.VENDIDA
         unit.save(update_fields=["estado"])
         return unit
+
