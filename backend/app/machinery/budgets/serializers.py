@@ -41,6 +41,7 @@ class BudgetLogisticsInSerializer(serializers.Serializer):
 
 
 class BudgetCreateSerializer(serializers.Serializer):
+    numero = serializers.CharField(required=False, allow_blank=True, max_length=50)
     fecha = serializers.DateField(required=False)
     cliente_id = serializers.IntegerField(required=False, allow_null=True)
     items = BudgetItemInSerializer(many=True)

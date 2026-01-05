@@ -71,6 +71,7 @@ export type BudgetPreTaxChargeIn = {
 }
 
 export type BudgetCreatePayload = {
+  numero?: string
   fecha: string
   cliente_id?: number | null
   items: BudgetItemIn[]

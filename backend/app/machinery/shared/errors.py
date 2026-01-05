@@ -47,6 +47,12 @@ class ErrorCodes:
         http_status=409,
     )
 
+    BUDGET_NUMERO_ALREADY_EXISTS = ErrorDef(
+        code="BUDGET_NUMERO_ALREADY_EXISTS",
+        default_message="Ya existe un presupuesto con ese número.",
+        http_status=409,
+    )
+
     BUDGET_ALREADY_PURCHASED = ErrorDef(
         code="BUDGET_ALREADY_PURCHASED",
         default_message="El presupuesto ya fue comprado y no puede modificarse.",

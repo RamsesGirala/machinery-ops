@@ -9,6 +9,7 @@ export type BudgetsListFilters = {
   fechaDesde?: string
   fechaHasta?: string
   estado?: string
+  clienteId?: number
 }
 
 export async function fetchBudgets(filters: BudgetsListFilters = {}): Promise<PaginatedResponse<Budget>> {
@@ -19,6 +20,7 @@ export async function fetchBudgets(filters: BudgetsListFilters = {}): Promise<Pa
   if (filters.fechaDesde) q.fecha_desde = filters.fechaDesde
   if (filters.fechaHasta) q.fecha_hasta = filters.fechaHasta
   if (filters.estado) q.estado = filters.estado
+  if (filters.clienteId) q.cliente_id = filters.clienteId
 
   const res = await apiClient.get<PaginatedResponse<Budget>>('/api/budgets/', { params: q })
   return res.data

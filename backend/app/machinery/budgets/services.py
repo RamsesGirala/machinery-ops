@@ -1,11 +1,10 @@
 from __future__ import annotations
-from uuid import uuid4
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Any, Dict, List
 
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from django.db.models.deletion import ProtectedError
 from django.utils import timezone
 
@@ -47,7 +46,7 @@ def _money(v: Decimal) -> Decimal:
 
 def _gen_numero() -> str:
     now = timezone.now()
-    return f"PRESU-{now:%Y%m%d-%H%M%S-%f}-{uuid4().hex[:6].upper()}"
+    return f"PRESU-{now:%Y%m%d-%H%M}"
 
 
 @dataclass
@@ -342,10 +341,21 @@ class BudgetService:
 
     @transaction.atomic
     def create_from_payload(self, payload: Dict[str, Any]) -> Budget:
-        numero = _gen_numero()
+        numero_in = payload.get("numero")
+        numero = (str(numero_in).strip() if numero_in is not None else "")
+        if not numero:
+            numero = _gen_numero()
+
         fecha = payload.get("fecha") or date.today()
 
-        budget = Budget.objects.create(numero=numero, fecha=fecha, estado=BudgetStatus.DRAFT)
+        try:
+            budget = Budget.objects.create(numero=numero, fecha=fecha, estado=BudgetStatus.DRAFT)
+        except IntegrityError:
+            raise DomainError(
+                error=ErrorCodes.BUDGET_NUMERO_ALREADY_EXISTS,
+                details={"numero": numero},
+            )
+
         self._apply_payload_to_budget(budget=budget, payload=payload)
         return budget
 
@@ -365,8 +375,26 @@ class BudgetService:
                 details={"budget_id": budget.id, "purchase_id": budget.compra.id},
             )
 
+        # numero: si viene en payload, lo respetamos; si viene vacío, generamos uno nuevo
+        numero_in = payload.get("numero", None)
+        update_fields = ["fecha", "updated_at"]
+
+        if numero_in is not None:
+            numero_new = str(numero_in).strip()
+            if not numero_new:
+                numero_new = _gen_numero()
+            budget.numero = numero_new
+            update_fields.append("numero")
+
         budget.fecha = payload.get("fecha") or budget.fecha
-        budget.save(update_fields=["fecha", "updated_at"])
+
+        try:
+            budget.save(update_fields=update_fields)
+        except IntegrityError:
+            raise DomainError(
+                error=ErrorCodes.BUDGET_NUMERO_ALREADY_EXISTS,
+                details={"numero": budget.numero},
+            )
 
         budget.items.all().delete()
         budget.logisticas.all().delete()

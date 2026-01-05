@@ -44,6 +44,7 @@ export default function BudgetCreatePage() {
   const [pretaxCharges, setPreTaxCharges] = useState<PreTaxCharge[]>([])
 
   const [clienteId, setClienteId] = useState<number | null>(null)
+  const [numero, setNumero] = useState<string>('')
 
   type PreTaxSel = { pre_tax_charge_id: number; incluido: boolean; porcentaje: string; nombre: string }
   const [pretaxSel, setPretaxSel] = useState<Record<number, PreTaxSel>>({})
@@ -147,6 +148,7 @@ export default function BudgetCreatePage() {
 
         // fecha
         if (b?.fecha) setFecha(b.fecha)
+        if (b?.numero !== undefined) setNumero(String(b.numero ?? ''))
         setClienteId(b?.cliente?.id ?? b?.cliente_id ?? null)
 
         // Items: setItems + overrides globales para máquinas/accesorios
@@ -373,6 +375,7 @@ export default function BudgetCreatePage() {
     try {
       const payload: BudgetCreatePayload = {
         fecha,
+        numero,
         cliente_id: clienteId,
         items: items.map((it) => ({
           machine_base_id: it.machine_base_id,
@@ -444,6 +447,18 @@ export default function BudgetCreatePage() {
             <input type="date" className="form-control" value={fecha} onChange={(e) => setFecha(e.target.value)} />
           </div>
 
+          <div className="col-md-4">
+            <label className="form-label">Número (opcional)</label>
+            <input
+              type="text"
+              className="form-control"
+              value={numero}
+              placeholder="Dejá vacío para autogenerar"
+              onChange={(e) => setNumero(e.target.value)}
+            />
+            <div className="form-text">Si lo dejás vacío, se generará automáticamente al guardar.</div>
+          </div>
+
           <div className="col-md-5">
             <label className="form-label">Cliente (opcional)</label>
             <SearchSelect
@@ -453,8 +468,8 @@ export default function BudgetCreatePage() {
               options={clients.map((c) => ({ value: c.id, label: c.nombre }))}
               onChange={(v) => setClienteId(v ? Number(v) : null)}
             />
-
           </div>
+
         </div>
       </div>
 

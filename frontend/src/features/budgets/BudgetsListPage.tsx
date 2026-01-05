@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { fetchBudgets, deleteBudget, markBudgetPurchased, type BudgetsListFilters } from '../../api/budgetsApi'
-import type { Budget } from '../../api/types/models'
+import { fetchClientsAll } from '../../api/clientsApi'
+import type { Budget, Client} from '../../api/types/models'
 import PaginationBar from '../../components/global/PaginationBar'
 import ErrorAlert from '../../components/global/ErrorAlert'
 import ConfirmModal from '../../components/global/ConfirmModal'
+import SearchSelect from '../../components/global/SearchSelect'
 import { formatUSD } from '../../utils/money'
 import { formatDateAR } from '../../utils/date'
 
@@ -24,6 +26,8 @@ export default function BudgetsListPage() {
   const [fechaDesde, setFechaDesde] = useState<string>('')
   const [fechaHasta, setFechaHasta] = useState<string>('')
   const [estado, setEstado] = useState<string>('') // '' = todos
+  const [clients, setClients] = useState<Client[]>([])
+  const [clienteId, setClienteId] = useState<string>('')
 
   const filters: BudgetsListFilters = useMemo(
     () => ({
@@ -32,8 +36,9 @@ export default function BudgetsListPage() {
       fechaDesde: fechaDesde || undefined,
       fechaHasta: fechaHasta || undefined,
       estado: estado || undefined,
+      clienteId: clienteId ? Number(clienteId) : undefined,
     }),
-    [page, pageSize, fechaDesde, fechaHasta, estado]
+    [page, pageSize, fechaDesde, fechaHasta, estado, clienteId]
   )
 
   async function load() {
@@ -48,6 +53,18 @@ export default function BudgetsListPage() {
       setCount(0)
     }
   }
+
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const cs = await fetchClientsAll()
+        setClients(cs)
+      } catch {
+        // no cortamos la pantalla si falla el catálogo
+        setClients([])
+      }
+    })()
+  }, [])
 
   useEffect(() => {
     load()
@@ -117,6 +134,20 @@ export default function BudgetsListPage() {
             </div>
 
             <div className="col-12 col-md-3">
+              <label className="form-label small text-muted mb-1">Cliente</label>
+              <SearchSelect
+                value={clienteId}
+                placeholder="Buscar cliente..."
+                emptyLabel="— Todos —"
+                options={clients.map((c) => ({ value: c.id, label: c.nombre }))}
+                onChange={(v) => {
+                  setPage(1)
+                  setClienteId(v ? Number(v) : '')
+                }}
+              />
+            </div>
+
+            <div className="col-12 col-md-3">
               <label className="form-label small text-muted mb-1">Estado</label>
               <select
                 className="form-select"
@@ -141,6 +172,7 @@ export default function BudgetsListPage() {
                 setFechaDesde('')
                 setFechaHasta('')
                 setEstado('')
+                setClienteId('')
               }}
             >
               Limpiar filtros
