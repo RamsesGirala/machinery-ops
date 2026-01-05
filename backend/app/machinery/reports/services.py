@@ -7,7 +7,7 @@ from decimal import Decimal
 
 from django.db.models import Sum
 
-from machinery.models import Purchase, RevenueEvent, RevenueType
+from machinery.models import Purchase, RevenuePayment
 
 
 @dataclass(frozen=True)
@@ -36,9 +36,8 @@ class FinanceReport:
 class FinanceReportService:
     """
     Reglas:
-    - Ingresos por VENTA: RevenueEvent.tipo=VENTA y se contabiliza en RevenueEvent.fecha
-    - Ingresos por ALQUILER: RevenueEvent.tipo=ALQUILER pero solo cuando fecha_retorno_real != null,
-      y se contabiliza en fecha_retorno_real (cuando efectivamente se cobra).
+    - Ingresos: RevenuePayment.cobrado=True y se contabiliza por RevenuePayment.fecha_cobro_real
+      (es la fecha que cuenta para este reporte).
     - Egresos: Purchase.total_snapshot por Purchase.fecha_compra
     """
 
@@ -50,28 +49,18 @@ class FinanceReportService:
         ingresos_por_dia: dict[date, Decimal] = defaultdict(lambda: Decimal("0"))
         egresos_por_dia: dict[date, Decimal] = defaultdict(lambda: Decimal("0"))
 
-        # --- Ventas (por fecha)
-        ventas = (
-            RevenueEvent.objects.filter(tipo=RevenueType.VENTA, fecha__gte=desde, fecha__lte=hasta)
-            .values("fecha")
-            .annotate(total=Sum("monto_total"))
-        )
-        for r in ventas:
-            ingresos_por_dia[r["fecha"]] += r["total"] or Decimal("0")
-
-        # --- Alquileres cobrados (por retorno real)
-        alquileres_cobrados = (
-            RevenueEvent.objects.filter(
-                tipo=RevenueType.ALQUILER,
-                fecha_retorno_real__isnull=False,
-                fecha_retorno_real__gte=desde,
-                fecha_retorno_real__lte=hasta,
+        # --- Ingresos: pagos cobrados (por fecha_cobro_real)
+        pagos_cobrados = (
+            RevenuePayment.objects.filter(
+                cobrado=True,
+                fecha_cobro_real__gte=desde,
+                fecha_cobro_real__lte=hasta,
             )
-            .values("fecha_retorno_real")
-            .annotate(total=Sum("monto_total"))
+            .values("fecha_cobro_real")
+            .annotate(total=Sum("monto"))
         )
-        for r in alquileres_cobrados:
-            ingresos_por_dia[r["fecha_retorno_real"]] += r["total"] or Decimal("0")
+        for r in pagos_cobrados:
+            ingresos_por_dia[r["fecha_cobro_real"]] += r["total"] or Decimal("0")
 
         # --- Egresos: compras (por fecha_compra)
         compras = (
