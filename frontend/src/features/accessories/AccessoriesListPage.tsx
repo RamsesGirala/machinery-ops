@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 
 import type { Accessory } from '../../api/types'
 import { fetchAccessories, eliminarAccessory } from '../../api/accessoriesApi'
@@ -16,15 +16,22 @@ const PAGE_SIZES = [10, 20, 50]
 
 const AccessoriesListPage: React.FC = () => {
   const navigate = useNavigate()
+  const location = useLocation()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const from = location.pathname + location.search
+
   const { flash, clearFlash } = useFlashFromLocation()
 
   const [items, setItems] = useState<Accessory[]>([])
   const [count, setCount] = useState(0)
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
+  const [page, setPage] = useState(() => Number(searchParams.get('page') ?? 1))
+  const [pageSize, setPageSize] = useState(() => Number(searchParams.get('pageSize') ?? 10))
 
-  const [q, setQ] = useState('')
-  const [qApplied, setQApplied] = useState('')
+  const [q, setQ] = useState(() => searchParams.get('q') ?? '')
+  const [qApplied, setQApplied] = useState(() => searchParams.get('q') ?? '')
+
+  const didInitQ = useRef(false)
+
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -39,7 +46,8 @@ const AccessoriesListPage: React.FC = () => {
       const res = await fetchAccessories({ page, pageSize, q: qApplied || undefined })
       setItems(res.results)
       setCount(res.count)
-      if (page > pages) setPage(pages)
+      const newPages = Math.max(1, Math.ceil(res.count / Math.max(1, pageSize)))
+      if (page > newPages) setPage(newPages)
     } catch (e: any) {
       setError(drfErrorToMessage(e, 'No se pudieron cargar los accesorios.'))
     } finally {
@@ -48,12 +56,29 @@ const AccessoriesListPage: React.FC = () => {
   }
 
   useEffect(() => {
+    if (!didInitQ.current) {
+      didInitQ.current = true
+      return
+    }
+
     const t = setTimeout(() => {
       setQApplied(q.trim())
       setPage(1)
     }, 300)
+
     return () => clearTimeout(t)
   }, [q])
+
+  useEffect(() => {
+    const next: Record<string, string> = {}
+
+    if (page !== 1) next.page = String(page)
+    if (pageSize !== 10) next.pageSize = String(pageSize)
+    if (qApplied) next.q = qApplied
+
+    setSearchParams(next, { replace: true })
+  }, [page, pageSize, qApplied, setSearchParams])
+
 
   useEffect(() => {
     load()
@@ -66,7 +91,7 @@ const AccessoriesListPage: React.FC = () => {
     setError(null)
     try {
       await eliminarAccessory(id)
-      navigate('/accessories', { state: { flash: { type: 'success', message: 'Accesorio eliminado.' } } })
+      navigate(from, { state: { flash: { type: 'success', message: 'Accesorio eliminado.' } } })
       await load()
     } catch (e: any) {
       setError(e.response.data.error.message)
@@ -90,7 +115,7 @@ const AccessoriesListPage: React.FC = () => {
             value={q}
             onChange={(e) => setQ(e.target.value)}
           />
-          <Link to="/accessories/nuevo" className="btn btn-primary rounded-pill">
+          <Link to="/accessories/nuevo" state={{ from }} className="btn btn-primary rounded-pill">
             + Nuevo
           </Link>
         </div>
@@ -127,7 +152,7 @@ const AccessoriesListPage: React.FC = () => {
                   <td className="fw-semibold">{it.nombre}</td>
                   <td>{formatUSD(it.total)}</td>
                   <td className="text-end">
-                    <Link to={`/accessories/${it.id}/editar`} className="btn btn-sm btn-outline-secondary rounded-pill me-2">
+                    <Link to={`/accessories/${it.id}/editar`} state={{ from }} className="btn btn-sm btn-outline-secondary rounded-pill me-2">
                       Editar
                     </Link>
                     <button className="btn btn-sm btn-outline-danger rounded-pill" onClick={() => setConfirmId(it.id)}>

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-
+import { useReturnTo } from '../../hooks/useReturnTo'
 import ErrorAlert from '../../components/global/ErrorAlert'
 import { drfErrorToMessage } from '../../utils/drfErrorToMessage'
 import { crearMachine, editarMachine, fetchMachine } from '../../api/machinesApi'
@@ -10,7 +10,7 @@ const MachineFormPage: React.FC = () => {
   const { id } = useParams()
   const isEdit = Boolean(id)
   const navigate = useNavigate()
-
+  const { from, goBack } = useReturnTo('/machines')
   const [nombre, setNombre] = useState('')
   const [total, setTotal] = useState('0')
 
@@ -46,11 +46,11 @@ const MachineFormPage: React.FC = () => {
       if (isEdit) {
         const payload: MachineUpdatePayload = { nombre, total }
         await editarMachine(Number(id), payload)
-        navigate('/machines', { state: { flash: { type: 'success', message: 'Maquina Base actualizada.' } } })
+        navigate(from ?? '/machines', { state: { flash: { type: 'success', message: 'Maquina Base actualizada.' } } })
       } else {
         const payload: MachineCreatePayload = { nombre, total }
         await crearMachine(payload)
-        navigate('/machines', { state: { flash: { type: 'success', message: 'Maquina Base creada.' } } })
+        navigate(from ?? '/machines', { state: { flash: { type: 'success', message: 'Maquina Base creada.' } } })
       }
     } catch (e: any) {
       setError(e.response.data.error.message)
@@ -65,7 +65,7 @@ const MachineFormPage: React.FC = () => {
         <div>
           <h2 className="mb-1">{title}</h2>
         </div>
-        <button className="btn btn-outline-secondary rounded-pill" onClick={() => navigate(-1)}>
+        <button className="btn btn-outline-secondary rounded-pill" onClick={goBack}>
           Volver
         </button>
       </div>
@@ -99,7 +99,7 @@ const MachineFormPage: React.FC = () => {
           <button className="btn btn-primary rounded-pill" disabled={loading}>
             {loading ? 'Guardando...' : 'Guardar'}
           </button>
-          <button type="button" className="btn btn-outline-secondary rounded-pill" onClick={() => navigate('/machines')}>
+          <button type="button" className="btn btn-outline-secondary rounded-pill" onClick={goBack}>
             Cancelar
           </button>
         </div>

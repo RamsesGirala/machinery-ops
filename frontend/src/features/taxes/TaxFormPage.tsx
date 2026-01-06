@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-
+import { useReturnTo } from '../../hooks/useReturnTo'
 import ErrorAlert from '../../components/global/ErrorAlert'
 import { drfErrorToMessage } from '../../utils/drfErrorToMessage'
 import { crearTax, editarTax, fetchTax } from '../../api/taxesApi'
@@ -10,7 +10,7 @@ const TaxFormPage: React.FC = () => {
   const { id } = useParams()
   const isEdit = Boolean(id)
   const navigate = useNavigate()
-
+  const { from, goBack } = useReturnTo('/taxes')
   const [nombre, setNombre] = useState('')
   const [porcentaje, setPorcentaje] = useState('0')
   const [siempreIncluir, setSiempreIncluir] = useState(false)
@@ -57,7 +57,7 @@ const TaxFormPage: React.FC = () => {
           se_imprime_en_presupuesto: seImprime
         }
         await editarTax(Number(id), payload)
-        navigate('/taxes', { state: { flash: { type: 'success', message: 'Impuesto actualizado.' } } })
+        navigate(from ?? '/taxes', { state: { flash: { type: 'success', message: 'Impuesto actualizado.' } } })
       } else {
         const payload: TaxCreatePayload = {
           nombre,
@@ -67,7 +67,7 @@ const TaxFormPage: React.FC = () => {
           se_imprime_en_presupuesto: seImprime
         }
         await crearTax(payload)
-        navigate('/taxes', { state: { flash: { type: 'success', message: 'Impuesto creado.' } } })
+        navigate(from ?? '/taxes', { state: { flash: { type: 'success', message: 'Impuesto creado.' } } })
       }
     } catch (e: any) {
       setError(e.response.data.error.message)
@@ -82,7 +82,7 @@ const TaxFormPage: React.FC = () => {
         <div>
           <h2 className="mb-1">{title}</h2>
         </div>
-        <button className="btn btn-outline-secondary rounded-pill" onClick={() => navigate(-1)}>
+        <button className="btn btn-outline-secondary rounded-pill" onClick={goBack}>
           Volver
         </button>
       </div>
@@ -145,7 +145,7 @@ const TaxFormPage: React.FC = () => {
           <button className="btn btn-primary rounded-pill" disabled={loading}>
             {loading ? 'Guardando...' : 'Guardar'}
           </button>
-          <button type="button" className="btn btn-outline-secondary rounded-pill" onClick={() => navigate('/taxes')}>
+          <button type="button" className="btn btn-outline-secondary rounded-pill" onClick={goBack}>
             Cancelar
           </button>
         </div>

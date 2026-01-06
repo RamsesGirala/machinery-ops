@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-
+import { useReturnTo } from '../../hooks/useReturnTo'
 import ErrorAlert from '../../components/global/ErrorAlert'
 import { drfErrorToMessage } from '../../utils/drfErrorToMessage'
 import { crearPreTaxCharge, editarPreTaxCharge, fetchPreTaxCharge } from '../../api/preTaxChargesApi'
@@ -10,7 +10,7 @@ const PreTaxChargeFormPage: React.FC = () => {
   const { id } = useParams()
   const isEdit = Boolean(id)
   const navigate = useNavigate()
-
+  const { from, goBack } = useReturnTo('/pretax-charges')
   const [nombre, setNombre] = useState('')
   const [porcentaje, setPorcentaje] = useState('0')
   const [siempreIncluir, setSiempreIncluir] = useState(false)
@@ -49,11 +49,11 @@ const PreTaxChargeFormPage: React.FC = () => {
       if (isEdit) {
         const payload: PreTaxChargeUpdatePayload = payloadBase
         await editarPreTaxCharge(Number(id), payload)
-        navigate('/pretax-charges', { state: { flash: { type: 'success', message: 'Carga Pre Impuesto actualizada.' } } })
+        navigate(from ?? '/pretax-charges', { state: { flash: { type: 'success', message: 'Carga Pre Impuesto actualizada.' } } })
       } else {
         const payload: PreTaxChargeCreatePayload = payloadBase
         await crearPreTaxCharge(payload)
-        navigate('/pretax-charges', { state: { flash: { type: 'success', message: 'Carga Pre Impuesto creada.' } } })
+        navigate(from ?? '/pretax-charges', { state: { flash: { type: 'success', message: 'Carga Pre Impuesto creada.' } } })
       }
     } catch (e: any) {
       setError(e.response.data.error.message)
@@ -68,7 +68,7 @@ const PreTaxChargeFormPage: React.FC = () => {
         <div>
           <h2 className="mb-1">{title}</h2>
         </div>
-        <button className="btn btn-outline-secondary rounded-pill" onClick={() => navigate(-1)}>
+        <button className="btn btn-outline-secondary rounded-pill" onClick={goBack}>
           Volver
         </button>
       </div>
@@ -105,7 +105,7 @@ const PreTaxChargeFormPage: React.FC = () => {
           <button className="btn btn-primary rounded-pill" disabled={loading}>
             {loading ? 'Guardando...' : 'Guardar'}
           </button>
-          <button type="button" className="btn btn-outline-secondary rounded-pill" onClick={() => navigate('/pretax-charges')}>
+          <button type="button" className="btn btn-outline-secondary rounded-pill" onClick={goBack}>
             Cancelar
           </button>
         </div>

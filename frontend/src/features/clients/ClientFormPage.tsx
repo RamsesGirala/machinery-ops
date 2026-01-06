@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-
+import { useReturnTo } from '../../hooks/useReturnTo'
 import ErrorAlert from '../../components/global/ErrorAlert'
 import { drfErrorToMessage } from '../../utils/drfErrorToMessage'
 import { crearClient, editarClient, fetchClient } from '../../api/clientsApi'
@@ -10,7 +10,7 @@ const ClientFormPage: React.FC = () => {
   const { id } = useParams()
   const isEdit = Boolean(id)
   const navigate = useNavigate()
-
+  const { from, goBack } = useReturnTo('/clients')
   const [nombre, setNombre] = useState('')
   const [telefono, setTelefono] = useState('')
   const [email, setEmail] = useState('')
@@ -53,11 +53,11 @@ const ClientFormPage: React.FC = () => {
       if (isEdit) {
         const payload: ClientUpdatePayload = payloadBase
         await editarClient(Number(id), payload)
-        navigate('/clients', { state: { flash: { type: 'success', message: 'Cliente actualizado.' } } })
+        navigate(from ?? '/clients', { state: { flash: { type: 'success', message: 'Cliente actualizado.' } } })
       } else {
         const payload: ClientCreatePayload = payloadBase
         await crearClient(payload)
-        navigate('/clients', { state: { flash: { type: 'success', message: 'Cliente creado.' } } })
+        navigate(from ?? '/clients', { state: { flash: { type: 'success', message: 'Cliente creado.' } } })
       }
     } catch (e: any) {
       setError(drfErrorToMessage(e, 'No se pudo guardar.'))
@@ -72,7 +72,7 @@ const ClientFormPage: React.FC = () => {
         <div>
           <h2 className="mb-1">{title}</h2>
         </div>
-        <button className="btn btn-outline-secondary rounded-pill" onClick={() => navigate(-1)}>
+        <button className="btn btn-outline-secondary rounded-pill" onClick={goBack}>
           Volver
         </button>
       </div>
@@ -99,7 +99,7 @@ const ClientFormPage: React.FC = () => {
           <button className="btn btn-primary rounded-pill" disabled={loading}>
             {loading ? 'Guardando...' : 'Guardar'}
           </button>
-          <button type="button" className="btn btn-outline-secondary rounded-pill" onClick={() => navigate('/clients')}>
+          <button type="button" className="btn btn-outline-secondary rounded-pill" onClick={goBack}>
             Cancelar
           </button>
         </div>

@@ -5,12 +5,13 @@ import type { BudgetDetail } from '../../api/types/models'
 import ErrorAlert from '../../components/global/ErrorAlert'
 import { formatUSD } from '../../utils/money'
 import { formatDateAR } from '../../utils/date'
+import { useReturnTo } from '../../hooks/useReturnTo'
 
 export default function BudgetDetailPage() {
   const { id } = useParams()
   const nav = useNavigate()
   const budgetId = Number(id)
-
+  const { goBack } = useReturnTo('/budgets')
   const [data, setData] = useState<BudgetDetail | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -38,7 +39,7 @@ export default function BudgetDetailPage() {
           </div>
         </div>
 
-        <button className="btn btn-outline-secondary" onClick={() => nav('/budgets')}>
+        <button className="btn btn-outline-secondary" onClick={goBack}>
           Volver
         </button>
       </div>

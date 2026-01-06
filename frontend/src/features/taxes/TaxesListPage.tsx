@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 
 import type { Tax } from '../../api/types'
 import { fetchTaxes, eliminarTax } from '../../api/taxesApi'
@@ -16,15 +16,21 @@ const PAGE_SIZES = [10, 20, 50]
 
 const TaxesListPage: React.FC = () => {
   const navigate = useNavigate()
+  const location = useLocation()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const from = location.pathname + location.search
+
   const { flash, clearFlash } = useFlashFromLocation()
 
   const [items, setItems] = useState<Tax[]>([])
   const [count, setCount] = useState(0)
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
+  const [page, setPage] = useState(() => Number(searchParams.get('page') ?? 1))
+  const [pageSize, setPageSize] = useState(() => Number(searchParams.get('pageSize') ?? 10))
 
-  const [q, setQ] = useState('')
-  const [qApplied, setQApplied] = useState('')
+  const [q, setQ] = useState(() => searchParams.get('q') ?? '')
+  const [qApplied, setQApplied] = useState(() => searchParams.get('q') ?? '')
+
+  const didInitQ = useRef(false)
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -39,7 +45,8 @@ const TaxesListPage: React.FC = () => {
       const res = await fetchTaxes({ page, pageSize, q: qApplied || undefined })
       setItems(res.results)
       setCount(res.count)
-      if (page > pages) setPage(pages)
+      const newPages = Math.max(1, Math.ceil(res.count / Math.max(1, pageSize)))
+      if (page > newPages) setPage(newPages)
     } catch (e: any) {
       setError(e.response.data.error.message)
     } finally {
@@ -48,12 +55,28 @@ const TaxesListPage: React.FC = () => {
   }
 
   useEffect(() => {
+    if (!didInitQ.current) {
+      didInitQ.current = true
+      return
+    }
+
     const t = setTimeout(() => {
       setQApplied(q.trim())
       setPage(1)
     }, 300)
+
     return () => clearTimeout(t)
   }, [q])
+
+  useEffect(() => {
+    const next: Record<string, string> = {}
+
+    if (page !== 1) next.page = String(page)
+    if (pageSize !== 10) next.pageSize = String(pageSize)
+    if (qApplied) next.q = qApplied
+
+    setSearchParams(next, { replace: true })
+  }, [page, pageSize, qApplied, setSearchParams])
 
   useEffect(() => {
     load()
@@ -66,7 +89,7 @@ const TaxesListPage: React.FC = () => {
     setError(null)
     try {
       await eliminarTax(id)
-      navigate('/taxes', { state: { flash: { type: 'success', message: 'Impuesto eliminado.' } } })
+      navigate(from, { state: { flash: { type: 'success', message: 'Impuesto eliminado.' } } })
       await load()
     } catch (e: any) {
       setError(e.response.data.error.message)
@@ -89,7 +112,7 @@ const TaxesListPage: React.FC = () => {
             value={q}
             onChange={(e) => setQ(e.target.value)}
           />
-          <Link to="/taxes/nuevo" className="btn btn-primary rounded-pill">
+          <Link to="/taxes/nuevo" state={{ from }} className="btn btn-primary rounded-pill">
             + Nuevo
           </Link>
         </div>
@@ -132,7 +155,7 @@ const TaxesListPage: React.FC = () => {
                   <td>{it.siempre_incluir ? 'Sí' : 'No'}</td>
                   <td>{it.se_imprime_en_presupuesto  ? 'Sí' : 'No'}</td>
                   <td className="text-end">
-                    <Link to={`/taxes/${it.id}/editar`} className="btn btn-sm btn-outline-secondary rounded-pill me-2">
+                    <Link to={`/taxes/${it.id}/editar`} state={{ from }} className="btn btn-sm btn-outline-secondary rounded-pill me-2">
                       Editar
                     </Link>
                     <button className="btn btn-sm btn-outline-danger rounded-pill" onClick={() => setConfirmId(it.id)}>

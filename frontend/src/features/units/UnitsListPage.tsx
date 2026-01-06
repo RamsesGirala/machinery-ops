@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { fetchPurchasedUnits, type UnitsListFilters } from '../../api/purchasedUnitsApi'
 import type { PurchasedUnit } from '../../api/types/models'
 import PaginationBar from '../../components/global/PaginationBar'
@@ -10,21 +10,40 @@ import { formatDateAR } from '../../utils/date'
 import { useToast } from '../../hooks/useToast'
 
 export default function UnitsListPage() {
+
   const nav = useNavigate()
+  const location = useLocation()
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  const from = location.pathname + location.search
   const lifecycle = useUnitLifecycleModal()
 
   const [items, setItems] = useState<PurchasedUnit[]>([])
   const [error, setError] = useState<string | null>(null)
 
-  const [page, setPage] = useState<number>(1)
-  const [pageSize, setPageSize] = useState<number>(10)
+  const [page, setPage] = useState<number>(() => Number(searchParams.get('page') ?? 1))
+  const [pageSize, setPageSize] = useState<number>(() => Number(searchParams.get('pageSize') ?? 10))
   const [count, setCount] = useState<number>(0)
 
-  const [estado, setEstado] = useState<string>('') // '' = todos
-  const [fechaDesde, setFechaDesde] = useState<string>('')
-  const [fechaHasta, setFechaHasta] = useState<string>('')
+  const [estado, setEstado] = useState<string>(() => searchParams.get('estado') ?? '') // '' = todos
+  const [fechaDesde, setFechaDesde] = useState<string>(() => searchParams.get('fechaDesde') ?? '')
+  const [fechaHasta, setFechaHasta] = useState<string>(() => searchParams.get('fechaHasta') ?? '')
 
   const toast = useToast()
+
+  // Sync filtros/paginación -> URL (para que al volver no se resetee)
+  useEffect(() => {
+    const next: Record<string, string> = {}
+
+    if (page !== 1) next.page = String(page)
+    if (pageSize !== 10) next.pageSize = String(pageSize)
+    if (estado) next.estado = estado
+    if (fechaDesde) next.fechaDesde = fechaDesde
+    if (fechaHasta) next.fechaHasta = fechaHasta
+
+    setSearchParams(next, { replace: true })
+  }, [page, pageSize, estado, fechaDesde, fechaHasta, setSearchParams])
+
 
   const filters: UnitsListFilters = useMemo(
     () => ({
@@ -157,7 +176,7 @@ export default function UnitsListPage() {
                     <td>{formatDateAR(u.fecha_compra)}</td>
                     <td className="text-muted">{u.budget_numero}</td>
                     <td className="text-end">
-                      <button className="btn btn-sm btn-outline-secondary me-2" onClick={() => nav(`/units/${u.id}`)}>
+                      <button className="btn btn-sm btn-outline-secondary me-2" onClick={() => nav(`/units/${u.id}`, { state: { from } })}>
                         Ver
                       </button>
 

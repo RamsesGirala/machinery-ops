@@ -20,6 +20,7 @@ export interface LogisticsLeg {
   hasta: string
   nombre: string
   total: string
+  tipo: string
   etapa: string
   created_at: string
   updated_at: string

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { fetchBudgets, deleteBudget, markBudgetPurchased, type BudgetsListFilters } from '../../api/budgetsApi'
 import { fetchClientsAll } from '../../api/clientsApi'
 import type { Budget, Client} from '../../api/types/models'
@@ -13,12 +13,14 @@ import { useToast } from '../../hooks/useToast'
 
 export default function BudgetsListPage() {
   const nav = useNavigate()
-
+  const location = useLocation()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const from = location.pathname + location.search
   const [items, setItems] = useState<Budget[]>([])
   const [error, setError] = useState<string | null>(null)
 
-  const [page, setPage] = useState<number>(1)
-  const [pageSize, setPageSize] = useState<number>(10)
+  const [page, setPage] = useState<number>(() => Number(searchParams.get('page') ?? 1))
+  const [pageSize, setPageSize] = useState<number>(() => Number(searchParams.get('pageSize') ?? 10))
   const [count, setCount] = useState<number>(0)
 
   const [confirmId, setConfirmId] = useState<number | null>(null)
@@ -28,11 +30,11 @@ export default function BudgetsListPage() {
   const toast = useToast()
 
   // filtros
-  const [fechaDesde, setFechaDesde] = useState<string>('')
-  const [fechaHasta, setFechaHasta] = useState<string>('')
-  const [estado, setEstado] = useState<string>('') // '' = todos
+  const [fechaDesde, setFechaDesde] = useState<string>(() => searchParams.get('fechaDesde') ?? '')
+  const [fechaHasta, setFechaHasta] = useState<string>(() => searchParams.get('fechaHasta') ?? '')
+  const [estado, setEstado] = useState<string>(() => searchParams.get('estado') ?? '') // '' = todos
   const [clients, setClients] = useState<Client[]>([])
-  const [clienteId, setClienteId] = useState<string>('')
+  const [clienteId, setClienteId] = useState<string>(() => searchParams.get('clienteId') ?? '')
 
   const filters: BudgetsListFilters = useMemo(
     () => ({
@@ -45,6 +47,20 @@ export default function BudgetsListPage() {
     }),
     [page, pageSize, fechaDesde, fechaHasta, estado, clienteId]
   )
+
+  useEffect(() => {
+    const next: Record<string, string> = {}
+
+    if (page !== 1) next.page = String(page)
+    if (pageSize !== 10) next.pageSize = String(pageSize)
+    if (fechaDesde) next.fechaDesde = fechaDesde
+    if (fechaHasta) next.fechaHasta = fechaHasta
+    if (estado) next.estado = estado
+    if (clienteId) next.clienteId = String(clienteId)
+
+    setSearchParams(next, { replace: true })
+  }, [page, pageSize, fechaDesde, fechaHasta, estado, clienteId, setSearchParams])
+
 
   async function load() {
     try {
@@ -110,7 +126,7 @@ export default function BudgetsListPage() {
           <h1 className="h3 mb-0">Presupuestos</h1>
         </div>
 
-        <button className="btn btn-primary" onClick={() => nav('/budgets/nuevo')}>
+        <button className="btn btn-primary" onClick={() => nav('/budgets/nuevo', { state: { from } })}>
           + Nuevo
         </button>
       </div>
@@ -239,7 +255,10 @@ export default function BudgetsListPage() {
                       </span>
                     </td>
                     <td className="text-end">
-                      <button className="btn btn-sm btn-outline-secondary me-2" onClick={() => nav(`/budgets/${b.id}`)}>
+                      <button
+                        className="btn btn-sm btn-outline-secondary me-2"
+                        onClick={() => nav(`/budgets/${b.id}`, { state: { from } })}
+                      >
                         Ver
                       </button>
 
@@ -247,7 +266,7 @@ export default function BudgetsListPage() {
                       <>
                         <button
                           className="btn btn-sm btn-outline-primary me-2"
-                          onClick={() => nav(`/budgets/${b.id}/editar`)}
+                          onClick={() => nav(`/budgets/${b.id}/editar`, { state: { from } })}
                         >
                           Editar
                         </button>

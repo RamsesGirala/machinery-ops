@@ -401,7 +401,7 @@ class UnitLifecycleService:
                 message_override="El cliente indicado no existe o no se indico ningun cliente.",
                 details={"cliente_id": cliente_id},
             )
-        
+
         mp = PaymentMethod(metodo_pago)
 
         ev = RevenueEvent.objects.create(

@@ -8,13 +8,13 @@ import UnitLifecycleModal from '../../components/units/UnitLifecycleModal'
 import { useUnitLifecycleModal } from '../../hooks/useUnitLifecycleModal'
 import { formatUSD } from '../../utils/money'
 import { formatDateAR } from '../../utils/date'
-
+import { useReturnTo } from '../../hooks/useReturnTo'
 
 export default function UnitDetailPage() {
   const { id } = useParams()
   const nav = useNavigate()
   const lifecycle = useUnitLifecycleModal()
-
+  const { goBack } = useReturnTo('/units')
   const [data, setData] = useState<PurchasedUnitDetail | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -41,7 +41,7 @@ export default function UnitDetailPage() {
           <div className="text-muted small">Detalle</div>
         </div>
         <div className="d-flex gap-2">
-          <button className="btn btn-outline-secondary" onClick={() => nav(-1)}>
+          <button className="btn btn-outline-secondary" onClick={goBack}>
             Volver
           </button>
 

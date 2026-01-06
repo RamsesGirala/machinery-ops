@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-
+import { useReturnTo } from '../../hooks/useReturnTo'
 import ErrorAlert from '../../components/global/ErrorAlert'
 import { drfErrorToMessage } from '../../utils/drfErrorToMessage'
 import { crearLogisticsLeg, editarLogisticsLeg, fetchLogisticsLeg } from '../../api/logisticsLegsApi'
@@ -13,7 +13,7 @@ const LogisticsLegFormPage: React.FC = () => {
   const { id } = useParams()
   const isEdit = Boolean(id)
   const navigate = useNavigate()
-
+  const { from, goBack } = useReturnTo('/logistics-legs')
   const [desde, setDesde] = useState('')
   const [hasta, setHasta] = useState('')
   const [tipo, setTipo] = useState<TipoEnum>('TERRESTRE')
@@ -55,11 +55,11 @@ const LogisticsLegFormPage: React.FC = () => {
       if (isEdit) {
         const payload: LogisticsLegUpdatePayload = { desde, hasta, tipo, etapa, total }
         await editarLogisticsLeg(Number(id), payload)
-        navigate('/logistics-legs', { state: { flash: { type: 'success', message: 'Tramo de Logistica actualizado.' } } })
+        navigate(from ?? '/logistics-legs', { state: { flash: { type: 'success', message: 'Tramo de Logistica actualizado.' } } })
       } else {
         const payload: LogisticsLegCreatePayload = { desde, hasta, tipo, etapa, total }
         await crearLogisticsLeg(payload)
-        navigate('/logistics-legs', { state: { flash: { type: 'success', message: 'Tramo de Logistica creado.' } } })
+        navigate(from ?? '/logistics-legs', { state: { flash: { type: 'success', message: 'Tramo de Logistica creado.' } } })
       }
     } catch (e: any) {
       setError(drfErrorToMessage(e, 'No se pudo guardar.'))
@@ -74,7 +74,7 @@ const LogisticsLegFormPage: React.FC = () => {
         <div>
           <h2 className="mb-1">{title}</h2>
         </div>
-        <button className="btn btn-outline-secondary rounded-pill" onClick={() => navigate(-1)}>
+        <button className="btn btn-outline-secondary rounded-pill" onClick={goBack}>
           Volver
         </button>
       </div>
@@ -119,7 +119,7 @@ const LogisticsLegFormPage: React.FC = () => {
           <button className="btn btn-primary rounded-pill" disabled={loading}>
             {loading ? 'Guardando...' : 'Guardar'}
           </button>
-          <button type="button" className="btn btn-outline-secondary rounded-pill" onClick={() => navigate('/logistics-legs')}>
+          <button type="button" className="btn btn-outline-secondary rounded-pill" onClick={goBack}>
             Cancelar
           </button>
         </div>

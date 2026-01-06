@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 
 import type { PreTaxCharge } from '../../api/types'
 import { fetchPreTaxCharges, eliminarPreTaxCharge } from '../../api/preTaxChargesApi'
@@ -15,15 +15,21 @@ const PAGE_SIZES = [10, 20, 50]
 
 const PreTaxChargesListPage: React.FC = () => {
   const navigate = useNavigate()
+  const location = useLocation()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const from = location.pathname + location.search
+
   const { flash, clearFlash } = useFlashFromLocation()
 
   const [items, setItems] = useState<PreTaxCharge[]>([])
   const [count, setCount] = useState(0)
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
+  const [page, setPage] = useState(() => Number(searchParams.get('page') ?? 1))
+  const [pageSize, setPageSize] = useState(() => Number(searchParams.get('pageSize') ?? 10))
 
-  const [q, setQ] = useState('')
-  const [qApplied, setQApplied] = useState('')
+  const [q, setQ] = useState(() => searchParams.get('q') ?? '')
+  const [qApplied, setQApplied] = useState(() => searchParams.get('q') ?? '')
+
+  const didInitQ = useRef(false)
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -38,7 +44,8 @@ const PreTaxChargesListPage: React.FC = () => {
       const res = await fetchPreTaxCharges({ page, pageSize, q: qApplied || undefined})
       setItems(res.results)
       setCount(res.count)
-      if (page > pages) setPage(pages)
+      const newPages = Math.max(1, Math.ceil(res.count / Math.max(1, pageSize)))
+      if (page > newPages) setPage(newPages)
     } catch (e: any) {
       setError(e.response.data.error.message)
     } finally {
@@ -47,12 +54,28 @@ const PreTaxChargesListPage: React.FC = () => {
   }
 
   useEffect(() => {
+    if (!didInitQ.current) {
+      didInitQ.current = true
+      return
+    }
+
     const t = setTimeout(() => {
       setQApplied(q.trim())
       setPage(1)
     }, 300)
+
     return () => clearTimeout(t)
   }, [q])
+
+  useEffect(() => {
+    const next: Record<string, string> = {}
+
+    if (page !== 1) next.page = String(page)
+    if (pageSize !== 10) next.pageSize = String(pageSize)
+    if (qApplied) next.q = qApplied
+
+    setSearchParams(next, { replace: true })
+  }, [page, pageSize, qApplied, setSearchParams])
 
   useEffect(() => {
     load()
@@ -65,7 +88,7 @@ const PreTaxChargesListPage: React.FC = () => {
     setError(null)
     try {
       await eliminarPreTaxCharge(id)
-      navigate('/pretax-charges', { state: { flash: { type: 'success', message: 'Carga Pre Impuesto eliminada.' } } })
+      navigate(from, { state: { flash: { type: 'success', message: 'Carga Pre Impuesto eliminada.' } } })
       await load()
     } catch (e: any) {
       setError(e.response.data.error.message)
@@ -89,7 +112,7 @@ const PreTaxChargesListPage: React.FC = () => {
             value={q}
             onChange={(e) => setQ(e.target.value)}
           />
-          <Link to="/pretax-charges/nuevo" className="btn btn-primary rounded-pill">
+          <Link to="/pretax-charges/nuevo" state={{ from }} className="btn btn-primary rounded-pill">
             + Nuevo
           </Link>
         </div>
@@ -128,7 +151,7 @@ const PreTaxChargesListPage: React.FC = () => {
                   <td>{it.porcentaje}%</td>
                   <td>{it.siempre_incluir ? 'Sí' : 'No'}</td>
                   <td className="text-end">
-                    <Link to={`/pretax-charges/${it.id}/editar`} className="btn btn-sm btn-outline-secondary rounded-pill me-2">
+                    <Link to={`/pretax-charges/${it.id}/editar`} state={{ from }} className="btn btn-sm btn-outline-secondary rounded-pill me-2">
                       Editar
                     </Link>
                     <button className="btn btn-sm btn-outline-danger rounded-pill" onClick={() => setConfirmId(it.id)}>

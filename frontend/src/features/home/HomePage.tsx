@@ -79,7 +79,7 @@ const HomePage: React.FC = () => {
     },
     {
       title: 'Catálogo',
-      subtitle: 'Entidades base del negocio (lo que más vas a usar).',
+      subtitle: 'Entidades base del negocio.',
       items: [
         {
           icon: '👤',
@@ -107,14 +107,8 @@ const HomePage: React.FC = () => {
             { label: 'Ver', to: '/accessories', variant: 'soft' },
             { label: 'Nuevo', to: '/accessories/nuevo', variant: 'primary' }
           ]
-        }
-      ]
-    },
-    {
-      title: 'Configuración',
-      subtitle: 'Parámetros para cálculos y logística.',
-      items: [
-        {
+        },
+         {
           icon: '🧾',
           title: 'Impuestos',
           description: 'Impuestos aplicables a presupuestos.',

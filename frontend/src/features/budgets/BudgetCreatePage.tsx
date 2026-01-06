@@ -14,6 +14,7 @@ import type { BudgetCreatePayload } from '../../api/types/payloads'
 import { formatUSD } from '../../utils/money'
 import ErrorAlert from '../../components/global/ErrorAlert'
 import SearchSelect from '../../components/global/SearchSelect'
+import { useReturnTo } from '../../hooks/useReturnTo'
 
 type MachineLine = {
   machine_base_id: number
@@ -32,7 +33,7 @@ function toNum(s: string): number {
 export default function BudgetCreatePage() {
   const nav = useNavigate()
   const { id } = useParams()
-
+  const { goBack } = useReturnTo('/budgets')
   const isEdit = Boolean(id)
   const budgetId = id ? Number(id) : null
 
@@ -432,7 +433,7 @@ export default function BudgetCreatePage() {
           {loadingBudget ? <div className="text-muted small">Cargando presupuesto...</div> : null}
         </div>
 
-        <button className="btn btn-outline-secondary" onClick={() => nav('/budgets')}>
+        <button className="btn btn-outline-secondary" onClick={goBack}>
           Volver
         </button>
       </div>

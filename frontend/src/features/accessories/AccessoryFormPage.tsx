@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-
+import { useReturnTo } from '../../hooks/useReturnTo'
 import ErrorAlert from '../../components/global/ErrorAlert'
 import { drfErrorToMessage } from '../../utils/drfErrorToMessage'
 import { crearAccessory, editarAccessory, fetchAccessory } from '../../api/accessoriesApi'
@@ -10,7 +10,7 @@ const AccessoryFormPage: React.FC = () => {
   const { id } = useParams()
   const isEdit = Boolean(id)
   const navigate = useNavigate()
-
+  const { from, goBack } = useReturnTo('/accessories')
   const [nombre, setNombre] = useState('')
   const [total, setTotal] = useState('0')
 
@@ -46,11 +46,11 @@ const AccessoryFormPage: React.FC = () => {
       if (isEdit) {
         const payload: AccessoryUpdatePayload = { nombre, total }
         await editarAccessory(Number(id), payload)
-        navigate('/accessories', { state: { flash: { type: 'success', message: 'Accesorio actualizado.' } } })
+        navigate(from ?? '/accessories', { state: { flash: { type: 'success', message: 'Accesorio actualizado.' } } })
       } else {
         const payload: AccessoryCreatePayload = { nombre, total }
         await crearAccessory(payload)
-        navigate('/accessories', { state: { flash: { type: 'success', message: 'Accesorio creado.' } } })
+        navigate(from ?? '/accessories', { state: { flash: { type: 'success', message: 'Accesorio creado.' } } })
       }
     } catch (e: any) {
       setError(e.response.data.error.message)
@@ -65,7 +65,7 @@ const AccessoryFormPage: React.FC = () => {
         <div>
           <h2 className="mb-1">{title}</h2>
         </div>
-        <button className="btn btn-outline-secondary rounded-pill" onClick={() => navigate(-1)}>
+        <button className="btn btn-outline-secondary rounded-pill" onClick={goBack}>
           Volver
         </button>
       </div>
@@ -99,7 +99,7 @@ const AccessoryFormPage: React.FC = () => {
           <button className="btn btn-primary rounded-pill" disabled={loading}>
             {loading ? 'Guardando...' : 'Guardar'}
           </button>
-          <button type="button" className="btn btn-outline-secondary rounded-pill" onClick={() => navigate('/accessories')}>
+          <button type="button" className="btn btn-outline-secondary rounded-pill" onClick={goBack}>
             Cancelar
           </button>
         </div>
