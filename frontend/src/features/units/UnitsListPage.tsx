@@ -7,6 +7,7 @@ import ErrorAlert from '../../components/global/ErrorAlert'
 import UnitLifecycleModal from '../../components/units/UnitLifecycleModal'
 import { useUnitLifecycleModal } from '../../hooks/useUnitLifecycleModal'
 import { formatDateAR } from '../../utils/date'
+import { unitEstadoBadgeClass } from '../../utils/bagdes'
 import { useToast } from '../../hooks/useToast'
 
 export default function UnitsListPage() {
@@ -171,7 +172,7 @@ export default function UnitsListPage() {
                   <tr key={u.id}>
                     <td>{u.machine_nombre}</td>
                     <td>
-                      <span className="badge bg-secondary">{u.estado}</span>
+                      <span className={`badge ${unitEstadoBadgeClass(u.estado)}`}>{u.estado}</span>
                     </td>
                     <td>{formatDateAR(u.fecha_compra)}</td>
                     <td className="text-muted">{u.budget_numero}</td>

@@ -9,7 +9,7 @@ import FlashAlert from '../../components/global/FlashAlert'
 import ErrorAlert from '../../components/global/ErrorAlert'
 import ConfirmModal from '../../components/global/ConfirmModal'
 import { useFlashFromLocation } from '../../hooks/useFlashFromLocation'
-import { drfErrorToMessage } from '../../utils/drfErrorToMessage'
+import { logisticsTipoBadgeClass, logisticsEtapaBadgeClass } from '../../utils/bagdes'
 import { formatUSD } from '../../utils/money'
 
 const PAGE_SIZES = [10, 20, 50]
@@ -152,8 +152,8 @@ const LogisticsLegsListPage: React.FC = () => {
                 <tr key={it.id}>
                   <td className="fw-semibold">{it.desde}</td>
                   <td>{it.hasta}</td>
-                  <td><span className="badge badge-soft rounded-pill">{it.tipo}</span></td>
-                  <td><span className="badge badge-soft rounded-pill">{it.etapa}</span></td>
+                  <td><span className={`badge rounded-pill ${logisticsTipoBadgeClass(it.tipo)}`}>{it.tipo}</span></td>
+                  <td><span className={`badge rounded-pill ${logisticsEtapaBadgeClass(it.etapa)}`}>{it.etapa}</span></td>
                   <td>{formatUSD(it.total)}</td>
                   <td className="text-end">
                     <Link to={`/logistics-legs/${it.id}/editar`} state={{ from }} className="btn btn-sm btn-outline-secondary rounded-pill me-2">

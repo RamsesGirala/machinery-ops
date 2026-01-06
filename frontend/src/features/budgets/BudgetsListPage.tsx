@@ -9,6 +9,7 @@ import ConfirmModal from '../../components/global/ConfirmModal'
 import SearchSelect from '../../components/global/SearchSelect'
 import { formatUSD } from '../../utils/money'
 import { formatDateAR } from '../../utils/date'
+import { budgetEstadoBadgeClass } from '../../utils/bagdes'
 import { useToast } from '../../hooks/useToast'
 
 export default function BudgetsListPage() {
@@ -250,7 +251,7 @@ export default function BudgetsListPage() {
                     <td>{formatDateAR(b.fecha)}</td>
                     <td>{formatUSD(b.total_snapshot)}</td>
                     <td>
-                      <span className={`badge ${b.estado === 'CERRADO' ? 'bg-success' : 'bg-secondary'}`}>
+                      <span className={`badge ${budgetEstadoBadgeClass(b.estado)}`}>
                         {b.estado}
                       </span>
                     </td>
