@@ -49,3 +49,10 @@ export async function updateBudget(id: number, payload: BudgetCreatePayload): Pr
   const res = await apiClient.put<BudgetDetail>(`/api/budgets/${id}/`, payload)
   return res.data
 }
+
+export function getBudgetPdfUrl(id: number, rentabilidadPct?: string | number): string {
+  const base = String(apiClient.defaults.baseURL ?? '').replace(/\/+$/, '')
+  const r = rentabilidadPct === undefined || rentabilidadPct === null ? '' : String(rentabilidadPct).trim()
+  const q = r ? `?rentabilidad=${encodeURIComponent(r)}` : ''
+  return `${base}/api/budgets/${id}/pdf/${q}`
+}

@@ -1,16 +1,21 @@
 from __future__ import annotations
 
+from decimal import Decimal
+
+from django.http import HttpResponse
 from rest_framework import mixins, viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from machinery.shared.pagination import DefaultPagination
+from .pdf import build_budget_pdf_bytes
 
 from .serializers import BudgetCreateSerializer, BudgetListSerializer, BudgetDetailSerializer
 from .services import BudgetService
 from .repositories import BudgetRepository
 
 from machinery.purchases.services import PurchaseService
+from ..models import Budget
 
 
 class BudgetViewSet(
@@ -100,3 +105,32 @@ class BudgetViewSet(
             purchase_service=self.purchase_service,
         )
         return Response({"ok": True, "purchase_id": purchase.id}, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=["get"], url_path="pdf")
+    def pdf(self, request, pk=None):
+        """Exportar presupuesto a PDF (pensado para enviar al cliente)."""
+        budget_id = int(pk)
+
+        # Aceptamos ambos nombres por comodidad: ?rentabilidad=10 o ?rentabilidad_pct=10
+        rp = request.query_params.get("rentabilidad")
+        if rp is None:
+            rp = request.query_params.get("rentabilidad_pct")
+
+        try:
+            rentabilidad_pct = Decimal(str(rp)) if rp not in (None, "") else Decimal("0")
+        except Exception:
+            rentabilidad_pct = Decimal("0")
+
+        # carga con relaciones necesarias para armar el PDF
+        budget = Budget.objects.select_related("cliente").prefetch_related(
+            "items__machine_base",
+            "items__accesorios__accessory",
+            "impuestos__tax",
+        ).get(pk=budget_id)
+
+        pdf_bytes = build_budget_pdf_bytes(budget=budget, rentabilidad_pct=rentabilidad_pct)
+        filename = f"presupuesto-{budget.numero}.pdf"
+
+        resp = HttpResponse(pdf_bytes, content_type="application/pdf")
+        resp["Content-Disposition"] = f'inline; filename="{filename}"'
+        return resp

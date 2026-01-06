@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { fetchBudget } from '../../api/budgetsApi'
+import { fetchBudget, getBudgetPdfUrl } from '../../api/budgetsApi'
 import type { BudgetDetail } from '../../api/types/models'
 import ErrorAlert from '../../components/global/ErrorAlert'
 import { formatUSD } from '../../utils/money'
@@ -14,6 +14,15 @@ export default function BudgetDetailPage() {
   const { goBack } = useReturnTo('/budgets')
   const [data, setData] = useState<BudgetDetail | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  const [rentabilidad, setRentabilidad] = useState<string>('15')
+
+  function onExportPdf() {
+    if (!Number.isFinite(budgetId)) return
+    const url = getBudgetPdfUrl(budgetId, rentabilidad)
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }
+
 
   async function load() {
     try {
@@ -39,9 +48,30 @@ export default function BudgetDetailPage() {
           </div>
         </div>
 
-        <button className="btn btn-outline-secondary" onClick={goBack}>
-          Volver
-        </button>
+        <div className="d-flex gap-2 align-items-end">
+          <div>
+            <label className="form-label mb-1 text-muted" style={{ fontSize: 12 }}>
+              Rentabilidad (%)
+            </label>
+            <input
+              className="form-control form-control-sm"
+              style={{ width: 140 }}
+              value={rentabilidad}
+              onChange={(e) => setRentabilidad(e.target.value)}
+              placeholder="0"
+              inputMode="decimal"
+            />
+          </div>
+
+          <button className="btn btn-sm btn-outline-primary" onClick={onExportPdf} disabled={!data}>
+            Exportar PDF
+          </button>
+
+          <button className="btn btn-outline-secondary" onClick={goBack}>
+            Volver
+          </button>
+        </div>
+
       </div>
 
       {error && <ErrorAlert message={error} />}
