@@ -17,7 +17,7 @@ const AccessoryFormPage: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const title = useMemo(() => (isEdit ? 'Editar Accessory' : 'Nuevo Accessory'), [isEdit])
+  const title = useMemo(() => (isEdit ? 'Editar Accesorio' : 'Nuevo Accesorio'), [isEdit])
 
   useEffect(() => {
     const load = async () => {

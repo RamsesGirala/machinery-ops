@@ -1,15 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { FaPencilAlt, FaTrash } from 'react-icons/fa'
 
 import type { Tax } from '../../api/types'
 import { fetchTaxes, eliminarTax } from '../../api/taxesApi'
-
 import PaginationBar from '../../components/global/PaginationBar'
 import FlashAlert from '../../components/global/FlashAlert'
 import ErrorAlert from '../../components/global/ErrorAlert'
 import ConfirmModal from '../../components/global/ConfirmModal'
 import { useFlashFromLocation } from '../../hooks/useFlashFromLocation'
-import { drfErrorToMessage } from '../../utils/drfErrorToMessage'
 import { formatUSD } from '../../utils/money'
 
 const PAGE_SIZES = [10, 20, 50]
@@ -155,11 +154,13 @@ const TaxesListPage: React.FC = () => {
                   <td>{it.siempre_incluir ? 'Sí' : 'No'}</td>
                   <td>{it.se_imprime_en_presupuesto  ? 'Sí' : 'No'}</td>
                   <td className="text-end">
-                    <Link to={`/taxes/${it.id}/editar`} state={{ from }} className="btn btn-sm btn-outline-secondary rounded-pill me-2">
-                      Editar
+                    <Link to={`/taxes/${it.id}/editar`}  title="Editar"
+                      aria-label="Editar" state={{ from }} className="btn btn-sm btn-outline-secondary rounded-pill me-2">
+                      <FaPencilAlt />
                     </Link>
-                    <button className="btn btn-sm btn-outline-danger rounded-pill" onClick={() => setConfirmId(it.id)}>
-                      Eliminar
+                    <button className="btn btn-sm btn-outline-danger rounded-pill" title="Eliminar"
+                      aria-label="Eliminar" onClick={() => setConfirmId(it.id)}>
+                      <FaTrash />
                     </button>
                   </td>
                 </tr>

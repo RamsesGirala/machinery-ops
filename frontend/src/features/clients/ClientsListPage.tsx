@@ -1,15 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { FaPencilAlt, FaTrash } from 'react-icons/fa'
 
 import type { Client } from '../../api/types'
 import { fetchClients, eliminarClient } from '../../api/clientsApi'
-
 import PaginationBar from '../../components/global/PaginationBar'
 import FlashAlert from '../../components/global/FlashAlert'
 import ErrorAlert from '../../components/global/ErrorAlert'
 import ConfirmModal from '../../components/global/ConfirmModal'
 import { useFlashFromLocation } from '../../hooks/useFlashFromLocation'
-import { drfErrorToMessage } from '../../utils/drfErrorToMessage'
+
 
 const PAGE_SIZES = [10, 20, 50]
 
@@ -151,11 +151,13 @@ const ClientsListPage: React.FC = () => {
                   <td>{it.telefono ?? '-'}</td>
                   <td>{it.email ?? '-'}</td>
                   <td className="text-end">
-                    <Link to={`/clients/${it.id}/editar`} state={{ from }} className="btn btn-sm btn-outline-secondary rounded-pill me-2">
-                      Editar
+                    <Link to={`/clients/${it.id}/editar`} state={{ from }} title="Editar"
+                      aria-label="Editar" className="btn btn-sm btn-outline-secondary rounded-pill me-2">
+                      <FaPencilAlt />
                     </Link>
-                    <button className="btn btn-sm btn-outline-danger rounded-pill" onClick={() => setConfirmId(it.id)}>
-                      Eliminar
+                    <button className="btn btn-sm btn-outline-danger rounded-pill" title="Eliminar"
+                      aria-label="Eliminar" onClick={() => setConfirmId(it.id)}>
+                      <FaTrash />
                     </button>
                   </td>
                 </tr>

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { FaEye, FaPencilAlt, FaShoppingCart, FaTrash } from 'react-icons/fa'
 import { fetchBudgets, deleteBudget, markBudgetPurchased, type BudgetsListFilters } from '../../api/budgetsApi'
 import { fetchClientsAll } from '../../api/clientsApi'
 import type { Budget, Client} from '../../api/types/models'
@@ -256,34 +257,42 @@ export default function BudgetsListPage() {
                       </span>
                     </td>
                     <td className="text-end">
-                      <button
-                        className="btn btn-sm btn-outline-secondary me-2"
-                        onClick={() => nav(`/budgets/${b.id}`, { state: { from } })}
-                      >
-                        Ver
-                      </button>
+                    <button
+                      className="btn btn-sm btn-outline-secondary btn-icon me-2"
+                      onClick={() => nav(`/budgets/${b.id}`, { state: { from } })}
+                      title="Ver"
+                      aria-label="Ver"
+                    >
+                      <FaEye />
+                    </button>
 
                     {b.estado === 'DRAFT' ? (
                       <>
                         <button
-                          className="btn btn-sm btn-outline-primary me-2"
+                          className="btn btn-sm btn-outline-primary btn-icon me-2"
                           onClick={() => nav(`/budgets/${b.id}/editar`, { state: { from } })}
+                          title="Editar"
+                          aria-label="Editar"
                         >
-                          Editar
+                          <FaPencilAlt />
                         </button>
 
                         <button
-                          className="btn btn-sm btn-outline-success me-2"
+                          className="btn btn-sm btn-outline-success btn-icon me-2"
                           onClick={() => setConfirmPurchasedId(b.id)}
+                          title="Marcar comprado"
+                          aria-label="Marcar comprado"
                         >
-                          Marcar comprado
+                          <FaShoppingCart />
                         </button>
 
                         <button
-                          className="btn btn-sm btn-outline-danger"
+                          className="btn btn-sm btn-outline-danger btn-icon"
                           onClick={() => setConfirmId(b.id)}
+                          title="Eliminar"
+                          aria-label="Eliminar"
                         >
-                          Eliminar
+                          <FaTrash />
                         </button>
                       </>
                     ) : null}

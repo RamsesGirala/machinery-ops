@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
-
+import { FaPencilAlt, FaTrash } from 'react-icons/fa'
 import type { MachineBase } from '../../api/types'
 import { fetchMachines, eliminarMachine } from '../../api/machinesApi'
 
@@ -153,14 +153,23 @@ const MachinesListPage: React.FC = () => {
                   <td className="fw-semibold">{it.nombre}</td>
                   <td>{formatUSD(it.total)}</td>
                   <td className="text-end">
-                    <Link to={`/machines/${it.id}/editar`} state={{ from }} className="btn btn-sm btn-outline-secondary rounded-pill me-2">
-                      Editar
-                    </Link>
-                    <button
-                      className="btn btn-sm btn-outline-danger rounded-pill"
-                      onClick={() => setConfirmId(it.id)}
+                    <Link
+                      to={`/machines/${it.id}/editar`}
+                      state={{ from }}
+                      className="btn btn-sm btn-outline-secondary rounded-pill btn-icon me-2"
+                      title="Editar"
+                      aria-label="Editar"
                     >
-                      Eliminar
+                      <FaPencilAlt />
+                    </Link>
+
+                    <button
+                      className="btn btn-sm btn-outline-danger rounded-pill btn-icon"
+                      onClick={() => setConfirmId(it.id)}
+                      title="Eliminar"
+                      aria-label="Eliminar"
+                    >
+                      <FaTrash />
                     </button>
                   </td>
                 </tr>

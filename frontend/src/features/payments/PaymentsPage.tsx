@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { FaCashRegister } from 'react-icons/fa'
 import ErrorAlert from '../../components/global/ErrorAlert'
 import PaginationBar from '../../components/global/PaginationBar'
 import { fetchRevenuePayments, markPaymentPaid, type RevenuePaymentListItem } from '../../api/revenuePaymentsApi'
@@ -334,8 +335,13 @@ export default function PaymentsPage() {
                   </td>
                   <td className="text-end">
                     {!p.cobrado ? (
-                      <button className="btn btn-sm btn-outline-success" onClick={() => setConfirmId(p.id)}>
-                        Marcar cobrado
+                      <button
+                        className="btn btn-sm btn-outline-success btn-icon"
+                        onClick={() => setConfirmId(p.id)}
+                        title="Marcar cobrado"
+                        aria-label="Marcar cobrado"
+                      >
+                        <FaCashRegister />
                       </button>
                     ) : (
                       <span className="text-muted small"> — </span>

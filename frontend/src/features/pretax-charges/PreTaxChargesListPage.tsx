@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { FaPencilAlt, FaTrash } from 'react-icons/fa'
 
 import type { PreTaxCharge } from '../../api/types'
 import { fetchPreTaxCharges, eliminarPreTaxCharge } from '../../api/preTaxChargesApi'
-
 import PaginationBar from '../../components/global/PaginationBar'
 import FlashAlert from '../../components/global/FlashAlert'
 import ErrorAlert from '../../components/global/ErrorAlert'
@@ -151,11 +151,13 @@ const PreTaxChargesListPage: React.FC = () => {
                   <td>{it.porcentaje}%</td>
                   <td>{it.siempre_incluir ? 'Sí' : 'No'}</td>
                   <td className="text-end">
-                    <Link to={`/pretax-charges/${it.id}/editar`} state={{ from }} className="btn btn-sm btn-outline-secondary rounded-pill me-2">
-                      Editar
+                    <Link to={`/pretax-charges/${it.id}/editar`}  title="Editar"
+                      aria-label="Editar" state={{ from }} className="btn btn-sm btn-outline-secondary rounded-pill me-2">
+                      <FaPencilAlt />
                     </Link>
-                    <button className="btn btn-sm btn-outline-danger rounded-pill" onClick={() => setConfirmId(it.id)}>
-                      Eliminar
+                    <button className="btn btn-sm btn-outline-danger rounded-pill" title="Eliminar"
+                      aria-label="Eliminar" onClick={() => setConfirmId(it.id)}>
+                      <FaTrash />
                     </button>
                   </td>
                 </tr>

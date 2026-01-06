@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
+import { FaEye, FaKey, FaTag, FaLockOpen } from 'react-icons/fa'
 import { fetchPurchasedUnits, type UnitsListFilters } from '../../api/purchasedUnitsApi'
 import type { PurchasedUnit } from '../../api/types/models'
 import PaginationBar from '../../components/global/PaginationBar'
@@ -177,27 +178,45 @@ export default function UnitsListPage() {
                     <td>{formatDateAR(u.fecha_compra)}</td>
                     <td className="text-muted">{u.budget_numero}</td>
                     <td className="text-end">
-                      <button className="btn btn-sm btn-outline-secondary me-2" onClick={() => nav(`/units/${u.id}`, { state: { from } })}>
-                        Ver
+                      <button
+                        className="btn btn-sm btn-outline-secondary btn-icon me-2"
+                        onClick={() => nav(`/units/${u.id}`, { state: { from } })}
+                        title="Ver"
+                        aria-label="Ver"
+                      >
+                        <FaEye />
                       </button>
 
                       {u.estado === 'DEPOSITO' ? (
                         <>
                           <button
-                            className="btn btn-sm btn-outline-primary me-2"
+                            className="btn btn-sm btn-outline-primary btn-icon me-2"
                             onClick={() => lifecycle.open('rent', u)}
+                            title="Alquilar"
+                            aria-label="Alquilar"
                           >
-                            Alquilar
+                            <FaKey />
                           </button>
-                          <button className="btn btn-sm btn-outline-danger" onClick={() => lifecycle.open('sell', u)}>
-                            Vender
+
+                          <button
+                            className="btn btn-sm btn-outline-danger btn-icon"
+                            onClick={() => lifecycle.open('sell', u)}
+                            title="Vender"
+                            aria-label="Vender"
+                          >
+                            <FaTag />
                           </button>
                         </>
                       ) : null}
 
                       {u.estado === 'ALQUILADA' ? (
-                        <button className="btn btn-sm btn-outline-success" onClick={() => lifecycle.open('finish', u)}>
-                          Finalizar alquiler
+                        <button
+                          className="btn btn-sm btn-outline-success btn-icon"
+                          onClick={() => lifecycle.open('finish', u)}
+                          title="Finalizar alquiler"
+                          aria-label="Finalizar alquiler"
+                        >
+                          <FaLockOpen />
                         </button>
                       ) : null}
                     </td>

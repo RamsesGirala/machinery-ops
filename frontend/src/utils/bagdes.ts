@@ -22,7 +22,7 @@ export function unitEstadoBadgeClass(estado: string): string {
 export function budgetEstadoBadgeClass(estado: string): string {
   switch (estado) {
     case 'DRAFT':
-      return 'bg-secondary'
+      return 'bg-success'
     case 'CERRADO':
       // Cerrado no debería verse "éxito/verde"
       return 'bg-dark'

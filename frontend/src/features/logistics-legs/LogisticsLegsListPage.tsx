@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { FaPencilAlt, FaTrash } from 'react-icons/fa'
 
 import type { LogisticsLeg } from '../../api/types'
 import { fetchLogisticsLegs, eliminarLogisticsLeg } from '../../api/logisticsLegsApi'
-
 import PaginationBar from '../../components/global/PaginationBar'
 import FlashAlert from '../../components/global/FlashAlert'
 import ErrorAlert from '../../components/global/ErrorAlert'
@@ -156,11 +156,23 @@ const LogisticsLegsListPage: React.FC = () => {
                   <td><span className={`badge rounded-pill ${logisticsEtapaBadgeClass(it.etapa)}`}>{it.etapa}</span></td>
                   <td>{formatUSD(it.total)}</td>
                   <td className="text-end">
-                    <Link to={`/logistics-legs/${it.id}/editar`} state={{ from }} className="btn btn-sm btn-outline-secondary rounded-pill me-2">
-                      Editar
+                    <Link
+                      to={`/logistics-legs/${it.id}/editar`}
+                      state={{ from }}
+                      className="btn btn-sm btn-outline-secondary rounded-pill btn-icon me-2"
+                      title="Editar"
+                      aria-label="Editar"
+                    >
+                      <FaPencilAlt />
                     </Link>
-                    <button className="btn btn-sm btn-outline-danger rounded-pill" onClick={() => setConfirmId(it.id)}>
-                      Eliminar
+
+                    <button
+                      className="btn btn-sm btn-outline-danger rounded-pill btn-icon"
+                      onClick={() => setConfirmId(it.id)}
+                      title="Eliminar"
+                      aria-label="Eliminar"
+                    >
+                      <FaTrash />
                     </button>
                   </td>
                 </tr>
