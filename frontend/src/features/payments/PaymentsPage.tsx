@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import ErrorAlert from '../../components/global/ErrorAlert'
 import PaginationBar from '../../components/global/PaginationBar'
 import { fetchRevenuePayments, markPaymentPaid, type RevenuePaymentListItem } from '../../api/revenuePaymentsApi'
@@ -38,8 +38,8 @@ export default function PaymentsPage() {
   const [clienteId, setClienteId] = useState<number | ''>('')
   const [metodoPago, setMetodoPago] = useState<string>('')
   const [tipo, setTipo] = useState<string>('')
-  const [fechaDesde, setFechaDesde] = useState<string>('')
-  const [fechaHasta, setFechaHasta] = useState<string>('')
+  const [fechaDesde, setFechaDesde] = useState<string>(() => toISO(addDays(new Date(), -7)))
+  const [fechaHasta, setFechaHasta] = useState<string>(() => toISO(addDays(new Date(), 7)))
 
   const [data, setData] = useState<PaginatedResponse<RevenuePaymentListItem> | null>(null)
   const totalPages = useMemo(() => (data ? Math.max(1, Math.ceil(data.count / pageSize)) : 1), [data, pageSize])
@@ -48,9 +48,10 @@ export default function PaymentsPage() {
   const [confirmLoading, setConfirmLoading] = useState(false)
 
   const toast = useToast()
-
+  const loadSeq = useRef(0)
 
   async function load() {
+    const seq = ++loadSeq.current
     try {
       setError(null)
       const res = await fetchRevenuePayments({
@@ -63,18 +64,16 @@ export default function PaymentsPage() {
         fechaDesde: fechaDesde || undefined,
         fechaHasta: fechaHasta || undefined,
       })
+
+      // Si hubo otro load después, ignoramos este resultado
+      if (seq !== loadSeq.current) return
+
       setData(res)
     } catch (e: any) {
+      if (seq !== loadSeq.current) return
       setError(e.response.data.error.message)
     }
   }
-
-  useEffect(() => {
-    const t = new Date()
-    setFechaDesde(toISO(addDays(t, -7)))
-    setFechaHasta(toISO(addDays(t, 7)))
-    setPage(1)
-  }, [])
 
   useEffect(() => {
     ;(async () => {
@@ -308,6 +307,7 @@ export default function PaymentsPage() {
             <thead>
               <tr>
                 <th>Fecha Prevista</th>
+                <th>Fecha Pago Real</th>
                 <th>Cliente</th>
                 <th>Tipo</th>
                 <th>Método</th>
@@ -320,6 +320,7 @@ export default function PaymentsPage() {
               {data.results.map((p) => (
                 <tr key={p.id}>
                   <td>{formatDateAR(p.fecha_prevista)}</td>
+                  <td>{p.fecha_cobro_real ? formatDateAR(p.fecha_cobro_real) : '-'}</td>
                   <td>{p.cliente?.nombre ?? '—'}</td>
                   <td>{p.revenue_event_tipo}</td>
                   <td>{p.metodo_pago}</td>
