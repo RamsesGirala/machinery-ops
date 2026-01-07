@@ -15,11 +15,12 @@ export default function BudgetDetailPage() {
   const [data, setData] = useState<BudgetDetail | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const [rentabilidad, setRentabilidad] = useState<string>('15')
+  const [rentabilidad, setRentabilidad] = useState<string>('80')
+  const [validezDias, setValidezDias] = useState<string>('30')
 
   function onExportPdf() {
     if (!Number.isFinite(budgetId)) return
-    const url = getBudgetPdfUrl(budgetId, rentabilidad)
+    const url = getBudgetPdfUrl(budgetId, rentabilidad, validezDias)
     window.open(url, '_blank', 'noopener,noreferrer')
   }
 
@@ -62,6 +63,20 @@ export default function BudgetDetailPage() {
               inputMode="decimal"
             />
           </div>
+          <div>
+            <label className="form-label mb-1 text-muted" style={{ fontSize: 12 }}>
+              Validez (días)
+            </label>
+            <input
+              className="form-control form-control-sm"
+              style={{ width: 140 }}
+              value={validezDias}
+              onChange={(e) => setValidezDias(e.target.value)}
+              placeholder="30"
+              inputMode="numeric"
+            />
+          </div>
+
 
           <button className="btn btn-sm btn-outline-primary" onClick={onExportPdf} disabled={!data}>
             Exportar PDF

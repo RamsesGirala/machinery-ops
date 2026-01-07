@@ -52,9 +52,19 @@ export async function updateBudget(id: number, payload: BudgetCreatePayload): Pr
   return res.data
 }
 
-export function getBudgetPdfUrl(id: number, rentabilidadPct?: string | number): string {
+export function getBudgetPdfUrl(id: number,rentabilidadPct?: string | number,validezDias?: string | number): string {
   const base = String(apiClient.defaults.baseURL ?? '').replace(/\/+$/, '')
-  const r = rentabilidadPct === undefined || rentabilidadPct === null ? '' : String(rentabilidadPct).trim()
-  const q = r ? `?rentabilidad=${encodeURIComponent(r)}` : ''
-  return `${base}/api/budgets/${id}/pdf/${q}`
+
+  const r =
+    rentabilidadPct === undefined || rentabilidadPct === null ? '' : String(rentabilidadPct).trim()
+  const v =
+    validezDias === undefined || validezDias === null ? '' : String(validezDias).trim()
+
+  const params = new URLSearchParams()
+  if (r) params.set('rentabilidad', r)
+  if (v) params.set('validez_dias', v)
+
+  const q = params.toString()
+  return `${base}/api/budgets/${id}/pdf${q ? `?${q}` : ''}`
 }
+

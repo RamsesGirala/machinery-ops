@@ -120,6 +120,16 @@ class BudgetViewSet(
         if rp is None:
             rp = request.query_params.get("rentabilidad_pct")
 
+        # Aceptamos ambos nombres por comdidad: ?validez_dias=30 o ?validez=30
+        vd = request.query_params.get("validez_dias")
+        if vd is None:
+            vd = request.query_params.get("validez")
+
+        try:
+            validez_dias = int(vd) if vd not in (None, "") else 7
+        except Exception:
+            validez_dias = 7
+
         try:
             rentabilidad_pct = Decimal(str(rp)) if rp not in (None, "") else Decimal("0")
         except Exception:
@@ -132,7 +142,7 @@ class BudgetViewSet(
             "impuestos__tax",
         ).get(pk=budget_id)
 
-        pdf_bytes = build_budget_pdf_bytes(budget=budget, rentabilidad_pct=rentabilidad_pct)
+        pdf_bytes = build_budget_pdf_bytes(budget=budget, rentabilidad_pct=rentabilidad_pct, validez_dias=validez_dias)
         filename = f"presupuesto-{budget.numero}.pdf"
 
         resp = HttpResponse(pdf_bytes, content_type="application/pdf")
