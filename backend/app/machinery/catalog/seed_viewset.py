@@ -17,7 +17,7 @@ class CatalogSeedViewSet(viewsets.ViewSet):
     """
     permission_classes = [AllowAny]
 
-    @action(detail=False, methods=["post"], url_path="apply")
+    @action(detail=False, methods=["post"], url_path="applyV2")
     def apply(self, request):
         clear_demo_data()
         clear_catalog()

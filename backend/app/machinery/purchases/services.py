@@ -15,8 +15,8 @@ class PurchaseService:
     @transaction.atomic
     def create_purchase_from_budget(self, *, budget_id: int, fecha_compra: str | None, notas: str = "") -> Purchase:
         budget = (
-            Budget.objects.select_for_update()
-            .select_related("compra")
+            Budget.objects.select_related("compra")
+            .select_for_update(of=("self",))
             .prefetch_related(
                 "items",
                 "items__accesorios",

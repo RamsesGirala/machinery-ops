@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from django.utils.dateparse import parse_date
+from django.db import transaction
 from django.utils import timezone
 from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
@@ -59,10 +60,11 @@ class RevenuePaymentViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, vi
         ser = MarkPaidSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
 
-        obj = self.get_queryset().select_for_update().get(pk=int(pk))
-        if not obj.cobrado:
-            obj.cobrado = True
-            obj.fecha_cobro_real = ser.validated_data.get("fecha_cobro_real") or timezone.now().date()
-            obj.save(update_fields=["cobrado", "fecha_cobro_real", "updated_at"])
+        with transaction.atomic():
+            obj = self.get_queryset().select_for_update().get(pk=int(pk))
+            if not obj.cobrado:
+                obj.cobrado = True
+                obj.fecha_cobro_real = ser.validated_data.get("fecha_cobro_real") or timezone.now().date()
+                obj.save(update_fields=["cobrado", "fecha_cobro_real", "updated_at"])
 
         return Response(RevenuePaymentListSerializer(obj).data)

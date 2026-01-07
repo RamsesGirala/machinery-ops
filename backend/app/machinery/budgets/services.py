@@ -79,8 +79,8 @@ class BudgetService:
     def purchase_from_draft(self, *, purchase_service: PurchaseService,budget_id: int, fecha_compra: str | None, notas: str = ""):
         # Lock del budget para evitar carreras (cerrar/comprar en paralelo)
         budget: Budget = (
-            Budget.objects.select_for_update()
-            .select_related("compra")
+            Budget.objects.select_related("compra")
+            .select_for_update(of=("self",))
             .get(pk=budget_id)
         )
 

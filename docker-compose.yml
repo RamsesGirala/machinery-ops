@@ -1,0 +1,51 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: machinery-ops-db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-machinery_ops}
+      POSTGRES_USER: ${POSTGRES_USER:-machinery}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-machinery}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-machinery} -d ${POSTGRES_DB:-machinery_ops}"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  backend:
+    build:
+      context: ./backend
+    container_name: machinery-ops-backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_ENGINE: django.db.backends.postgresql
+      DB_NAME: ${POSTGRES_DB:-machinery_ops}
+      DB_USER: ${POSTGRES_USER:-machinery}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-machinery}
+      DB_HOST: db
+      DB_PORT: "5432"
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: machinery-ops-frontend
+    depends_on:
+      - backend
+    environment:
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000}
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+volumes:
+  pgdata:

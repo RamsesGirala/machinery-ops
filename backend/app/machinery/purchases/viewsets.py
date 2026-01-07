@@ -35,7 +35,7 @@ class PurchasedUnitViewSet(
         machine_nombre = params.get("machine_nombre") or params.get("machine_name")
         if machine_nombre:
             qs = qs.filter(machine_base__nombre__icontains=machine_nombre)
-            
+
         estado = params.get("estado")
         if estado:
             qs = qs.filter(estado=estado)
