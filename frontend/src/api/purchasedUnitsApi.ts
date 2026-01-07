@@ -9,6 +9,7 @@ export type UnitsListFilters = {
   estado?: string
   fechaDesde?: string
   fechaHasta?: string
+  machineNombre?: string
 }
 
 export async function fetchPurchasedUnits(filters: UnitsListFilters = {}): Promise<PaginatedResponse<PurchasedUnit>> {
@@ -18,6 +19,7 @@ export async function fetchPurchasedUnits(filters: UnitsListFilters = {}): Promi
   if (filters.estado) q.estado = filters.estado
   if (filters.fechaDesde) q.fecha_desde = filters.fechaDesde
   if (filters.fechaHasta) q.fecha_hasta = filters.fechaHasta
+  if (filters.machineNombre) q.machine_nombre = filters.machineNombre 
 
   const res = await apiClient.get<PaginatedResponse<PurchasedUnit>>('/api/units/', { params: q })
   return res.data

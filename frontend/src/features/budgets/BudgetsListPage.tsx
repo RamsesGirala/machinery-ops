@@ -37,6 +37,7 @@ export default function BudgetsListPage() {
   const [estado, setEstado] = useState<string>(() => searchParams.get('estado') ?? '') // '' = todos
   const [clients, setClients] = useState<Client[]>([])
   const [clienteId, setClienteId] = useState<string>(() => searchParams.get('clienteId') ?? '')
+  const [numero, setNumero] = useState<string>(() => searchParams.get('numero') ?? '')
 
   const filters: BudgetsListFilters = useMemo(
     () => ({
@@ -46,8 +47,9 @@ export default function BudgetsListPage() {
       fechaHasta: fechaHasta || undefined,
       estado: estado || undefined,
       clienteId: clienteId ? Number(clienteId) : undefined,
+      numero: numero || undefined,
     }),
-    [page, pageSize, fechaDesde, fechaHasta, estado, clienteId]
+    [page, pageSize, fechaDesde, fechaHasta, estado, clienteId, numero]
   )
 
   useEffect(() => {
@@ -59,9 +61,10 @@ export default function BudgetsListPage() {
     if (fechaHasta) next.fechaHasta = fechaHasta
     if (estado) next.estado = estado
     if (clienteId) next.clienteId = String(clienteId)
+    if (numero) next.numero = numero
 
     setSearchParams(next, { replace: true })
-  }, [page, pageSize, fechaDesde, fechaHasta, estado, clienteId, setSearchParams])
+  }, [page, pageSize, fechaDesde, fechaHasta, estado, clienteId, numero,setSearchParams])
 
 
   async function load() {
@@ -177,6 +180,18 @@ export default function BudgetsListPage() {
                 }}
               />
             </div>
+            <div className="col-12 col-md-3">
+              <label className="form-label small text-muted mb-1">Número</label>
+              <input
+                className="form-control"
+                placeholder="Buscar numero presupuesto..."
+                value={numero}
+                onChange={(e) => {
+                  setPage(1)
+                  setNumero(e.target.value)
+                }}
+              />
+            </div>
 
             <div className="col-12 col-md-3">
               <label className="form-label small text-muted mb-1">Estado</label>
@@ -204,6 +219,7 @@ export default function BudgetsListPage() {
                 setFechaHasta('')
                 setEstado('')
                 setClienteId('')
+                setNumero('')
               }}
             >
               Limpiar filtros

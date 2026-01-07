@@ -27,9 +27,11 @@ export default function UnitsListPage() {
   const [pageSize, setPageSize] = useState<number>(() => Number(searchParams.get('pageSize') ?? 10))
   const [count, setCount] = useState<number>(0)
 
+  // Filtros
   const [estado, setEstado] = useState<string>(() => searchParams.get('estado') ?? '') // '' = todos
   const [fechaDesde, setFechaDesde] = useState<string>(() => searchParams.get('fechaDesde') ?? '')
   const [fechaHasta, setFechaHasta] = useState<string>(() => searchParams.get('fechaHasta') ?? '')
+  const [machineNombre, setMachineNombre] = useState<string>(() => searchParams.get('machineNombre') ?? '')
 
   const toast = useToast()
 
@@ -42,9 +44,10 @@ export default function UnitsListPage() {
     if (estado) next.estado = estado
     if (fechaDesde) next.fechaDesde = fechaDesde
     if (fechaHasta) next.fechaHasta = fechaHasta
+    if (machineNombre) next.machineNombre = machineNombre
 
     setSearchParams(next, { replace: true })
-  }, [page, pageSize, estado, fechaDesde, fechaHasta, setSearchParams])
+  }, [page, pageSize, estado, fechaDesde, fechaHasta, machineNombre, setSearchParams])
 
 
   const filters: UnitsListFilters = useMemo(
@@ -54,8 +57,9 @@ export default function UnitsListPage() {
       estado: estado || undefined,
       fechaDesde: fechaDesde || undefined,
       fechaHasta: fechaHasta || undefined,
+      machineNombre: machineNombre || undefined,
     }),
-    [page, pageSize, estado, fechaDesde, fechaHasta]
+    [page, pageSize, estado, fechaDesde, fechaHasta, machineNombre]
   )
 
   async function load() {
@@ -105,6 +109,18 @@ export default function UnitsListPage() {
                 <option value="VENDIDA">Vendida</option>
               </select>
             </div>
+            <div className="col-12 col-md-3">
+              <label className="form-label small text-muted mb-1">Máquina</label>
+              <input
+                className="form-control"
+                placeholder="Nombre de máquina..."
+                value={machineNombre}
+                onChange={(e) => {
+                  setPage(1)
+                  setMachineNombre(e.target.value)
+                }}
+              />
+            </div>
 
             <div className="col-12 col-md-3">
               <label className="form-label small text-muted mb-1">Fecha compra desde</label>
@@ -140,6 +156,7 @@ export default function UnitsListPage() {
                   setEstado('')
                   setFechaDesde('')
                   setFechaHasta('')
+                  setMachineNombre('')
                 }}
               >
                 Limpiar filtros

@@ -43,6 +43,7 @@ class BudgetViewSet(
         fecha_hasta = params.get("fecha_hasta")
         estado = params.get("estado")
         cliente_id = params.get("cliente_id") or params.get("client_id")
+        numero = params.get("numero")
 
         if fecha_desde:
             qs = qs.filter(fecha__gte=fecha_desde)
@@ -54,6 +55,9 @@ class BudgetViewSet(
 
         if cliente_id:
             qs = qs.filter(cliente_id=cliente_id)
+
+        if numero:
+            qs = qs.filter(numero__icontains=numero)
 
         return qs
 

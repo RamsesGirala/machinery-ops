@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import ConfirmModal from '../../components/global/ConfirmModal'
 import ErrorAlert from '../../components/global/ErrorAlert'
+import SearchSelect from '../global/SearchSelect'
+import type { SearchSelectOption } from '../global/SearchSelect'
 import { fetchClientsAll } from '../../api/clientsApi'
 import type { Client } from '../../api/types/models'
 import { finishUnitRental, markUnitRented, markUnitSold } from '../../api/purchasedUnitsApi'
@@ -56,6 +58,12 @@ export default function UnitLifecycleModal({ show, mode, unit, onClose, onSucces
   const [error, setError] = useState<string | null>(null)
   const [clients, setClients] = useState<Client[]>([])
   const cost = useMemo(() => toNumberSafe((unit as any)?.total_compra), [unit])
+
+  const clientOptions: SearchSelectOption[] = useMemo(
+    () => clients.map((c) => ({ value: c.id, label: c.nombre })),
+    [clients]
+  )
+
 
   const [rentForm, setRentForm] = useState<MarkRentedPayload>(() => ({
     cliente_id: 0,
@@ -221,12 +229,18 @@ export default function UnitLifecycleModal({ show, mode, unit, onClose, onSucces
         <div className="row g-2">
           <div className="col-12">
             <label className="form-label">Cliente</label>
-            <select className="form-select" value={rentForm.cliente_id} onChange={(e) => setRentForm({ ...rentForm, cliente_id: Number(e.target.value) })} disabled={loading}>
-              <option value={0}>— Seleccionar —</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>{c.nombre}</option>
-              ))}
-            </select>
+            <SearchSelect
+              className=""
+              value={rentForm.cliente_id ? rentForm.cliente_id : ''}
+              options={clientOptions}
+              placeholder="Buscar cliente..."
+              emptyLabel="— Seleccionar —"
+              disabled={loading}
+              onChange={(v) => {
+                const id = v === '' || v === null ? 0 : Number(v)
+                setRentForm({ ...rentForm, cliente_id: id })
+              }}
+            />
           </div>
 
           <div className="col-6">
@@ -314,19 +328,17 @@ export default function UnitLifecycleModal({ show, mode, unit, onClose, onSucces
         <div className="row g-2">
           <div className="col-12">
             <label className="form-label">Cliente</label>
-            <select
-              className="form-select"
-              value={sellForm.cliente_id}
-              onChange={(e) => setSellForm({ ...sellForm, cliente_id: Number(e.target.value) })}
+            <SearchSelect
+              value={sellForm.cliente_id ? sellForm.cliente_id : ''}
+              options={clientOptions}
+              placeholder="Buscar cliente..."
+              emptyLabel="— Seleccionar —"
               disabled={loading}
-            >
-              <option value={0}>— Seleccionar —</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nombre}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => {
+                const id = v === '' || v === null ? 0 : Number(v)
+                setSellForm({ ...sellForm, cliente_id: id })
+              }}
+            />
           </div>
 
           <div className="col-12 col-md-4">

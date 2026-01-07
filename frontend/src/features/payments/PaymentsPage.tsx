@@ -35,12 +35,13 @@ export default function PaymentsPage() {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
 
-  const [cobrado, setCobrado] = useState<boolean>(false) // false=pendientes, true=cobrados
+  type CobradoFilter = 'ALL' | 'PENDING' | 'PAID'
+  const [cobradoFilter, setCobradoFilter] = useState<CobradoFilter>('PENDING')
   const [clienteId, setClienteId] = useState<number | ''>('')
   const [metodoPago, setMetodoPago] = useState<string>('')
   const [tipo, setTipo] = useState<string>('')
-  const [fechaDesde, setFechaDesde] = useState<string>(() => toISO(addDays(new Date(), -7)))
-  const [fechaHasta, setFechaHasta] = useState<string>(() => toISO(addDays(new Date(), 7)))
+  const [fechaDesde, setFechaDesde] = useState<string>('')
+  const [fechaHasta, setFechaHasta] = useState<string>('')
 
   const [data, setData] = useState<PaginatedResponse<RevenuePaymentListItem> | null>(null)
   const totalPages = useMemo(() => (data ? Math.max(1, Math.ceil(data.count / pageSize)) : 1), [data, pageSize])
@@ -58,7 +59,7 @@ export default function PaymentsPage() {
       const res = await fetchRevenuePayments({
         page,
         pageSize,
-        cobrado,
+        cobrado: cobradoFilter === 'ALL' ? undefined : cobradoFilter === 'PAID',
         clienteId: clienteId === '' ? undefined : Number(clienteId),
         metodoPago: metodoPago || undefined,
         tipo: tipo || undefined,
@@ -89,7 +90,7 @@ export default function PaymentsPage() {
 
   useEffect(() => {
     load()
-  }, [page, pageSize, cobrado, clienteId, metodoPago, tipo, fechaDesde, fechaHasta])
+  }, [page, pageSize, cobradoFilter, clienteId, metodoPago, tipo, fechaDesde, fechaHasta])
 
   async function onMarkPaidConfirmed() {
     if (!confirmId) return
@@ -125,17 +126,18 @@ export default function PaymentsPage() {
             {/* FILA 1 */}
             <div className="col-12 col-md-3">
               <label className="form-label">Estado</label>
-              <select
-                className="form-select"
-                value={String(cobrado)}
-                onChange={(e) => {
-                  setPage(1)
-                  setCobrado(e.target.value === 'true')
-                }}
-              >
-                <option value="false">Pendientes</option>
-                <option value="true">Cobrados</option>
-              </select>
+                <select
+                  className="form-select"
+                  value={cobradoFilter}
+                  onChange={(e) => {
+                    setPage(1)
+                    setCobradoFilter(e.target.value as CobradoFilter)
+                  }}
+                >
+                  <option value="ALL">Todos</option>
+                  <option value="PENDING">Pendientes</option>
+                  <option value="PAID">Cobrados</option>
+                </select>
             </div>
 
             <div className="col-12 col-md-5">
@@ -215,6 +217,17 @@ export default function PaymentsPage() {
 
             <div className="col-12 col-md-6 d-flex align-items-end">
               <div className="btn-group flex-wrap" role="group" aria-label="Rangos rápidos">
+                <button
+                  className="btn btn-sm btn-outline-secondary"
+                  type="button"
+                  onClick={() => {
+                    setPage(1)
+                    setFechaDesde('')
+                    setFechaHasta('')
+                  }}
+                >
+                  Sin fecha
+                </button>
                 <button
                   className="btn btn-sm btn-outline-secondary"
                   type="button"
