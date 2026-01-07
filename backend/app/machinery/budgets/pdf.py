@@ -153,7 +153,7 @@ def build_budget_pdf_bytes(*, budget: Budget, rentabilidad_pct: Decimal, validez
         pagesize=pagesizes.A4,
         leftMargin=16 * mm,
         rightMargin=16 * mm,
-        topMargin=12 * mm,
+        topMargin=24 * mm,
         bottomMargin=14 * mm,
         title=f"Presupuesto {budget.numero}",
     )
@@ -295,18 +295,18 @@ def build_budget_pdf_bytes(*, budget: Budget, rentabilidad_pct: Decimal, validez
             [
                 ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#F3F4F6")),
                 ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                ("FONTSIZE", (0, 0), (-1, -1), 9),
+                ("FONTSIZE", (0, 0), (-1, -1), 10),
                 ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#E5E7EB")),
                 ("VALIGN", (0, 0), (-1, -1), "TOP"),
                 ("ALIGN", (1, 1), (1, -1), "RIGHT"),
                 ("ALIGN", (2, 1), (3, -1), "RIGHT"),
-                ("TOPPADDING", (0, 0), (-1, -1), 6),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                ("TOPPADDING", (0, 0), (-1, -1), 8),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
             ]
         )
     )
     story.append(detail_tbl)
-    story.append(Spacer(1, 10))
+    story.append(Spacer(1, 50))
 
     # --- Bloque RESUMEN (separado, tipo “Sub-total / Impuestos / Total”)
     resumen_rows: List[List[object]] = [
@@ -341,8 +341,8 @@ def build_budget_pdf_bytes(*, budget: Budget, rentabilidad_pct: Decimal, validez
                 ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#E5E7EB")),
                 ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#F9FAFB")),
                 ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
-                ("TOPPADDING", (0, 0), (-1, -1), 6),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                ("TOPPADDING", (0, 0), (-1, -1), 8),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
             ]
         )
     )
@@ -350,6 +350,28 @@ def build_budget_pdf_bytes(*, budget: Budget, rentabilidad_pct: Decimal, validez
     resumen_wrap = Table([["", resumen_tbl]], colWidths=[spacer_width, summary_width])
     resumen_wrap.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP")]))
     story.append(resumen_wrap)
+    story.append(Spacer(1, 12))
+
+    # --- Observaciones
+
+    obs = Table(
+        [[Paragraph("<b>Observaciones</b>", label_small)],
+         [Paragraph("• Precios en USD.  • Entrega sujeta a disponibilidad.  • Garantía según fabricante.",
+                    label_small)]],
+        colWidths=[190 * mm],
+    )
+    obs.setStyle(
+        TableStyle(
+            [
+                ("BOX", (0, 0), (-1, -1), 1, colors.HexColor("#9CA3AF")),
+                ("TOPPADDING", (0, 0), (-1, -1), 8),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+                ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+            ]
+        )
+    )
+    story.append(obs)
     story.append(Spacer(1, 12))
 
     # --- Firmas (opcional, como tus ejemplos)
