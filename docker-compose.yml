@@ -47,5 +47,37 @@ services:
       - ./frontend:/app
       - /app/node_modules
 
+  backup:
+    image: postgres:16-alpine
+    container_name: machinery-ops-backup
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGPORT: "5432"
+      PGDATABASE: ${POSTGRES_DB:-machinery_ops}
+      PGUSER: ${POSTGRES_USER:-machinery}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-machinery}
+      BACKUP_KEEP: "10"
+      BACKUP_PREFIX: "machinery-ops"
+    # Montamos la carpeta de Drive Desktop (en WSL es /mnt/c/...)
+    volumes:
+      - /mnt/c/Users/ramse/GoogleDrive/machinery-ops/backups:/backups
+    restart: "no"
+    command: >
+      sh -lc '
+        set -euo pipefail;
+        mkdir -p /backups;
+        ts="$$(date +%Y%m%d-%H%M%S)";
+        file="/backups/$${BACKUP_PREFIX}-$${ts}.dump.gz";
+        echo ">> creando backup: $${file}";
+        pg_dump -Fc | gzip > "$${file}";
+        echo ">> rotando backups, dejando $${BACKUP_KEEP}...";
+        ls -1t /backups/$${BACKUP_PREFIX}-*.dump.gz 2>/dev/null | tail -n +$$(( $${BACKUP_KEEP} + 1 )) | xargs -r rm -f;
+        echo ">> listo";
+      '
+
+
 volumes:
   pgdata:
