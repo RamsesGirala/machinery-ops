@@ -8,7 +8,7 @@ Incluye un mecanismo simple de **backups automáticos** a una carpeta sincroniza
 ## Requisitos
 
 - Windows + **WSL2**
-- **Docker Desktop** (con integración a WSL)
+- **Docker y Docker Compose en WSL2**
 - Git
 - (Opcional) **Google Drive Desktop** para sincronizar backups a la nube
 
