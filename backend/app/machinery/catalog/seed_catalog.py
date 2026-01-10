@@ -11,6 +11,7 @@ from machinery.models.catalog import (
     Accessory,
     Tax,
     PreTaxCharge,
+    AdditionalCharge,
     Client,
     LogisticsLeg,
     LogisticsType,
@@ -28,6 +29,7 @@ class SeedCatalogResult:
     accessories: int
     taxes: int
     pretax_charges: int
+    additional_charges: int
     clients: int
     logistics_legs: int
 
@@ -40,6 +42,7 @@ def clear_catalog() -> SeedCatalogResult:
     LogisticsLeg.objects.all().delete()
     Tax.objects.all().delete()
     PreTaxCharge.objects.all().delete()
+    AdditionalCharge.objects.all().delete()
     Client.objects.all().delete()
     Accessory.objects.all().delete()
     MachineBase.objects.all().delete()
@@ -49,6 +52,7 @@ def clear_catalog() -> SeedCatalogResult:
         accessories=0,
         taxes=0,
         pretax_charges=0,
+        additional_charges=0,
         clients=0,
         logistics_legs=0,
     )
@@ -219,11 +223,36 @@ def apply_catalog_seed(*, clear_first: bool = True) -> SeedCatalogResult:
         ignore_conflicts=False,
     )
 
+    # ----------------------------
+    # Additional Charges (sobre máquinas + accesorios; se suman al total final)
+    # Aplica MAX(% calculado, mínimo) cuando hay mínimo
+    # ----------------------------
+    additional = [
+        ("Cargo del Aduanero", "5.00", True, "950.00"),
+        ("Gastos de Puerto / Terminal", "1.50", True, "300.00"),
+        ("Gestión Documental / Despacho", "0.80", False, None),
+    ]
+    AdditionalCharge.objects.bulk_create(
+        [
+            AdditionalCharge(
+                nombre=n,
+                porcentaje=_d(p),
+                siempre_incluir=si,
+                monto_minimo=_d(mm) if mm else None,
+            )
+            for n, p, si, mm in additional
+        ],
+        ignore_conflicts=False,
+    )
+
+
     return SeedCatalogResult(
         machines=MachineBase.objects.count(),
         accessories=Accessory.objects.count(),
         taxes=Tax.objects.count(),
         pretax_charges=PreTaxCharge.objects.count(),
+        additional_charges=AdditionalCharge.objects.count(),
         clients=Client.objects.count(),
         logistics_legs=LogisticsLeg.objects.count(),
     )
+

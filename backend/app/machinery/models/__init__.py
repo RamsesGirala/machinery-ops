@@ -8,7 +8,8 @@ from .catalog import (
     LogisticsType,
     LogisticsStage,
     Client,
-    PreTaxCharge
+    PreTaxCharge,
+    AdditionalCharge
 )
 from .budget import (
     Budget,
@@ -16,6 +17,7 @@ from .budget import (
     BudgetItemAccessory,
     BudgetTaxApplied,
     BudgetPreTaxChargeApplied,
+    BudgetAdditionalChargeApplied,
     BudgetSelectedLogisticsLeg,
     BudgetStatus,
 )
@@ -41,6 +43,7 @@ __all__ = [
     "Tax",
     "Client",
     "PreTaxCharge",
+    "AdditionalCharge",
     "LogisticsLeg",
     "LogisticsType",
     "LogisticsStage",
@@ -49,6 +52,7 @@ __all__ = [
     "BudgetItemAccessory",
     "BudgetTaxApplied",
     "BudgetPreTaxChargeApplied",
+    "BudgetAdditionalChargeApplied",
     "BudgetSelectedLogisticsLeg",
     "BudgetStatus",
     "Purchase",

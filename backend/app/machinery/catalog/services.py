@@ -12,7 +12,9 @@ from .repositories import (
     TaxRepository,
     LogisticsLegRepository,
     ClientRepository,
-    PreTaxChargeRepository
+    PreTaxChargeRepository,
+    AdditionalCharge,
+    AdditionalChargeRepository
 )
 from ..shared.errors import DomainError, ErrorCodes
 
@@ -155,3 +157,24 @@ class PreTaxChargeService:
             self.repo.delete(obj)
         except ProtectedError as e:
             _raise_delete_protected(obj=obj, pk=pk, exc=e, label="La carga pre impuesto")
+
+@dataclass
+class AdditionalChargeService:
+    repo: AdditionalChargeRepository
+
+    def list_qs(self):
+        return self.repo.list_qs()
+
+    def create(self, data: Dict[str, Any]) -> AdditionalCharge:
+        return self.repo.create(**data)
+
+    def update(self, pk: int, data: Dict[str, Any]) -> AdditionalCharge:
+        obj = self.repo.get(pk)
+        return self.repo.update(obj, **data)
+
+    def delete(self, pk: int) -> None:
+        obj = self.repo.get(pk)
+        try:
+            self.repo.delete(obj)
+        except ProtectedError as e:
+            _raise_delete_protected(obj=obj, pk=pk, exc=e, label="El cargo adicional")

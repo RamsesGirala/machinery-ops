@@ -9,7 +9,7 @@ from .viewsets import (
     TaxViewSet,
     LogisticsLegViewSet,
     ClientViewSet,
-    PreTaxChargeViewSet
+    PreTaxChargeViewSet, AdditionalChargeViewSet
 )
 
 router = DefaultRouter()
@@ -20,5 +20,6 @@ router.register(r"logistics-legs", LogisticsLegViewSet, basename="catalog-logist
 router.register(r"clients", ClientViewSet, basename="catalog-clients")
 router.register(r"pretax-charges", PreTaxChargeViewSet, basename="catalog-pretax-charges")
 router.register(r"seed", CatalogSeedViewSet, basename="catalog-seed")
+router.register(r"additional-charges", AdditionalChargeViewSet, basename="catalog-additional-charges")
 
 urlpatterns = router.urls

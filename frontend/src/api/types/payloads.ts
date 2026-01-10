@@ -43,6 +43,13 @@ export type PreTaxChargeCreatePayload = {
 }
 export type PreTaxChargeUpdatePayload = PreTaxChargeCreatePayload
 
+export type AdditionalChargeCreatePayload = {
+  nombre: string
+  porcentaje: string
+  monto_minimo?: string | null
+  siempre_incluir: boolean
+}
+export type AdditionalChargeUpdatePayload = AdditionalChargeCreatePayload
 
 export type BudgetItemIn = {
   machine_base_id: number
@@ -70,6 +77,13 @@ export type BudgetPreTaxChargeIn = {
   porcentaje: string
 }
 
+export type BudgetAdditionalChargeIn = {
+  additional_charge_id: number
+  incluido?: boolean
+  porcentaje?: string
+  monto_minimo?: string | null
+}
+
 export type BudgetCreatePayload = {
   numero?: string
   fecha: string
@@ -77,6 +91,7 @@ export type BudgetCreatePayload = {
   items: BudgetItemIn[]
   pretax_charges?: BudgetPreTaxChargeIn[]
   impuestos?: BudgetTaxIn[]
+  additional_charges?: BudgetAdditionalChargeIn[]
   logisticas?: BudgetLogisticsIn[]
 }
 

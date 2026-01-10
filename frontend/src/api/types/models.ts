@@ -55,6 +55,17 @@ export interface PreTaxCharge {
   updated_at: string
 }
 
+export interface AdditionalCharge {
+  id: number
+  nombre: string
+  porcentaje: string
+  monto_minimo: string | null
+  siempre_incluir: boolean
+  created_at: string
+  updated_at: string
+}
+
+
 export type EtapaEnum = 'PRE' | 'POST'
 export type TipoEnum = 'VENTA' | 'ALQUILER'
 
@@ -119,6 +130,15 @@ export interface BudgetPreTaxChargeOut {
   monto_aplicado_snapshot: string
 }
 
+export interface BudgetAdditionalChargeOut {
+  id: number
+  additional_charge: number
+  additional_charge_nombre: string
+  porcentaje_snapshot: string
+  monto_minimo_snapshot: string | null
+  monto_aplicado_snapshot: string
+}
+
 export interface BudgetDetail extends Budget {
   cliente: { id: number; nombre: string } | null
 
@@ -130,9 +150,12 @@ export interface BudgetDetail extends Budget {
   base_pre_impuestos_snapshot: string
   total_pretax_charges_snapshot: string
 
+  total_additional_charges_snapshot: string
+
   items: BudgetItemOut[]
   pretax_charges: BudgetPreTaxChargeOut[]
   impuestos: BudgetTaxOut[]
+  additional_charges: BudgetAdditionalChargeOut[]
   logisticas: BudgetLogisticsOut[]
 }
 

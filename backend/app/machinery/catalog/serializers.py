@@ -9,7 +9,8 @@ from machinery.models import (
     LogisticsType,
     LogisticsStage,
     Client,
-    PreTaxCharge
+    PreTaxCharge,
+    AdditionalCharge
 )
 
 class MachineBaseSerializer(serializers.ModelSerializer):
@@ -49,4 +50,10 @@ class PreTaxChargeSerializer(serializers.ModelSerializer):
     class Meta:
         model = PreTaxCharge
         fields = ["id", "nombre", "porcentaje", "siempre_incluir", "created_at", "updated_at"]
+        read_only_fields = ["id", "created_at", "updated_at"]
+
+class AdditionalChargeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AdditionalCharge
+        fields = ["id", "nombre", "porcentaje", "monto_minimo", "siempre_incluir", "created_at", "updated_at"]
         read_only_fields = ["id", "created_at", "updated_at"]

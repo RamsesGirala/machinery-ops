@@ -35,6 +35,7 @@ class CatalogSeedViewSet(viewsets.ViewSet):
                     "pretax_charges": getattr(res, "pretax_charges", 0),
                     "clients": getattr(res, "clients", 0),
                     "logistics_legs": res.logistics_legs,
+                    "additional_charges": res.additional_charges,
                     "budgets": demo.budgets,
                     "purchases": demo.purchases,
                     "units": demo.units,
@@ -62,6 +63,7 @@ class CatalogSeedViewSet(viewsets.ViewSet):
                     "pretax_charges": getattr(res, "pretax_charges", 0),
                     "clients": getattr(res, "clients", 0),
                     "logistics_legs": res.logistics_legs,
+                    "additional_charges":res.additional_charges
                 },
             },
             status=status.HTTP_200_OK,

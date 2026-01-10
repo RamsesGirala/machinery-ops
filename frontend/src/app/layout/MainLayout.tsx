@@ -42,6 +42,10 @@ const MainLayout: React.FC = () => {
             Impuestos
           </NavLink>
 
+          <NavLink to="/additional-charges" className={linkClass}>
+            Cargos adicionales
+          </NavLink>
+
           <NavLink to="/logistics-legs" className={linkClass}>
             Logística
           </NavLink>

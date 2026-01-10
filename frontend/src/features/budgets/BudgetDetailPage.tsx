@@ -82,7 +82,17 @@ export default function BudgetDetailPage() {
             Exportar PDF
           </button>
 
-          <button className="btn btn-outline-secondary" onClick={goBack}>
+          {data?.estado === 'DRAFT' ? (
+            <button
+              className="btn btn-sm btn-outline-success"
+              onClick={() => nav(`/budgets/${budgetId}/editar`)}
+              disabled={!data}
+            >
+              Editar
+            </button>
+          ) : null}
+
+          <button className="btn btn-sm btn-outline-secondary" onClick={goBack}>
             Volver
           </button>
         </div>
@@ -115,6 +125,12 @@ export default function BudgetDetailPage() {
               <div className="card"><div className="card-body">
                 <div className="text-muted">Impuestos</div>
                 <div className="fs-4">{formatUSD(data.total_impuestos_snapshot)}</div>
+              </div></div>
+            </div>
+            <div className="col-md-2">
+              <div className="card"><div className="card-body">
+                <div className="text-muted">Cargos adicionales</div>
+                <div className="fs-4">{formatUSD(data.total_additional_charges_snapshot)}</div>
               </div></div>
             </div>
             <div className="col-md-2">
@@ -182,7 +198,7 @@ export default function BudgetDetailPage() {
             </div>
           </div>
 
-          <div className="card">
+          <div className="card mb-3">
             <div className="card-body">
               <h5>Impuestos</h5>
               <ul className="mb-0">
@@ -201,6 +217,27 @@ export default function BudgetDetailPage() {
               </ul>
             </div>
           </div>
+
+          <div className="card mb-3">
+            <div className="card-body">
+              <h5>Cargos adicionales</h5>
+              <ul className="mb-0">
+                {data.additional_charges.length === 0 ? (
+                  <li className="text-muted">Sin cargos adicionales aplicados.</li>
+                ) : (
+                  data.additional_charges.map((c) => (
+                    <li key={c.id}>
+                      {c.additional_charge_nombre} — {c.porcentaje_snapshot}%
+                      {c.monto_minimo_snapshot ? ` (mín ${formatUSD(c.monto_minimo_snapshot)})` : ''}
+                      {' — '}
+                      <b>{formatUSD(c.monto_aplicado_snapshot)}</b>
+                    </li>
+                  ))
+                )}
+              </ul>
+            </div>
+          </div>
+
         </>
       )}
     </div>

@@ -5,7 +5,7 @@ from typing import Type, TypeVar
 
 from django.db import models
 
-from machinery.models import MachineBase, Accessory, Tax, LogisticsLeg, Client, PreTaxCharge
+from machinery.models import MachineBase, Accessory, Tax, LogisticsLeg, Client, PreTaxCharge, AdditionalCharge
 
 ModelT = TypeVar("ModelT", bound=models.Model)
 
@@ -54,3 +54,7 @@ class ClientRepository(BaseRepository):
 class PreTaxChargeRepository(BaseRepository):
     def __init__(self) -> None:
         super().__init__(model=PreTaxCharge)
+
+class AdditionalChargeRepository(BaseRepository):
+    def __init__(self) -> None:
+        super().__init__(model=AdditionalCharge)

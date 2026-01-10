@@ -12,7 +12,7 @@ from .repositories import (
     TaxRepository,
     LogisticsLegRepository,
     ClientRepository,
-    PreTaxChargeRepository
+    PreTaxChargeRepository, AdditionalChargeRepository
 )
 from .services import (
     MachineBaseService,
@@ -20,7 +20,7 @@ from .services import (
     TaxService,
     LogisticsLegService,
     ClientService,
-    PreTaxChargeService
+    PreTaxChargeService, AdditionalChargeService
 )
 from .serializers import (
     MachineBaseSerializer,
@@ -28,7 +28,7 @@ from .serializers import (
     TaxSerializer,
     LogisticsLegSerializer,
     ClientSerializer,
-    PreTaxChargeSerializer
+    PreTaxChargeSerializer, AdditionalChargeSerializer
 )
 
 class NoPatchMixin:
@@ -191,6 +191,31 @@ class PreTaxChargeViewSet(BaseCatalogViewSet):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.service = PreTaxChargeService(repo=PreTaxChargeRepository())
+
+    def get_queryset(self):
+        qs = self.service.list_qs()
+        q = (self.request.query_params.get("q") or self.request.query_params.get("nombre") or "").strip()
+        if q:
+            qs = qs.filter(nombre__icontains=q)
+        return qs.order_by("nombre")
+
+    def perform_create(self, serializer):
+        obj = self.service.create(serializer.validated_data)
+        serializer.instance = obj
+
+    def perform_update(self, serializer):
+        obj = self.service.update(self.get_object().pk, serializer.validated_data)
+        serializer.instance = obj
+
+    def perform_destroy(self, instance):
+        self.service.delete(instance.pk)
+
+class AdditionalChargeViewSet(BaseCatalogViewSet):
+    serializer_class = AdditionalChargeSerializer
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.service = AdditionalChargeService(repo=AdditionalChargeRepository())
 
     def get_queryset(self):
         qs = self.service.list_qs()

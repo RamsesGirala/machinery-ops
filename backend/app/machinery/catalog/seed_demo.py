@@ -15,6 +15,7 @@ from machinery.models import (
     BudgetItem,
     BudgetItemAccessory,
     BudgetPreTaxChargeApplied,
+    BudgetAdditionalChargeApplied,
     BudgetTaxApplied,
     BudgetSelectedLogisticsLeg,
     Purchase,
@@ -30,6 +31,7 @@ from machinery.models.catalog import (
     Tax,
     PreTaxCharge,
     Client,
+    AdditionalCharge,
     LogisticsLeg,
     LogisticsStage,
 )
@@ -80,9 +82,11 @@ def clear_demo_data() -> None:
     BudgetSelectedLogisticsLeg.objects.all().delete()
     BudgetTaxApplied.objects.all().delete()
     BudgetPreTaxChargeApplied.objects.all().delete()
+    BudgetAdditionalChargeApplied.objects.all().delete()
     BudgetItemAccessory.objects.all().delete()
     BudgetItem.objects.all().delete()
     Budget.objects.all().delete()
+
 
 
 @transaction.atomic
@@ -105,6 +109,7 @@ def apply_demo_seed(*, months_back: int = 6, clear_first: bool = True) -> DemoSe
     accessories = list(Accessory.objects.all().order_by("id"))
     taxes = list(Tax.objects.all().order_by("id"))
     pretax = list(PreTaxCharge.objects.all().order_by("id"))
+    additional = list(AdditionalCharge.objects.all().order_by("id"))
     clients = list(Client.objects.all().order_by("id"))
     legs_hasta = list(LogisticsLeg.objects.filter(etapa=LogisticsStage.HASTA_ADUANA).order_by("id"))
     legs_post = list(LogisticsLeg.objects.filter(etapa=LogisticsStage.POST_ADUANA).order_by("id"))
@@ -197,6 +202,37 @@ def apply_demo_seed(*, months_back: int = 6, clear_first: bool = True) -> DemoSe
 
             c = _pick_client()
 
+            # additional charges: incluir los "siempre_incluir" y a veces 1 extra
+            additional_payload = []
+            for a in additional:
+                if a.siempre_incluir:
+                    additional_payload.append(
+                        {
+                            "additional_charge_id": a.id,
+                            "incluido": True,
+                            "porcentaje": str(a.porcentaje),
+                            "monto_minimo": str(a.monto_minimo) if a.monto_minimo is not None else None,
+                        }
+                    )
+
+            extras_add = [a for a in additional if not a.siempre_incluir]
+            if extras_add and random.random() < 0.45:
+                pick = random.choice(extras_add)
+                additional_payload.append(
+                    {
+                        "additional_charge_id": pick.id,
+                        "incluido": True,
+                        "porcentaje": str(pick.porcentaje),
+                        "monto_minimo": str(pick.monto_minimo) if pick.monto_minimo is not None else None,
+                    }
+                )
+
+            # a veces “simula override” del presupuesto para testear que persista en catálogo
+            if additional_payload and random.random() < 0.35:
+                pick = random.choice(additional_payload)
+                # variar porcentaje entre 3.5% y 6.5%
+                pick["porcentaje"] = str(Decimal(str(random.randint(35, 65))) / Decimal("10"))
+
             payload = {
                 "numero": str(uuid4()),  # ✅ GUID único
                 "fecha": fecha,
@@ -211,6 +247,7 @@ def apply_demo_seed(*, months_back: int = 6, clear_first: bool = True) -> DemoSe
                 "logisticas": [{"logistics_leg_id": lg1.id}, {"logistics_leg_id": lg2.id}],
                 "pretax_charges": pretax_payload,
                 "impuestos": impuestos_payload,
+                "additional_charges": additional_payload,
             }
 
             b = budget_service.create_from_payload(payload)

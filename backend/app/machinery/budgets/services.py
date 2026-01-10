@@ -14,6 +14,7 @@ from machinery.models import (
     BudgetItemAccessory,
     BudgetPreTaxChargeApplied,
     BudgetTaxApplied,
+    BudgetAdditionalChargeApplied,
     BudgetSelectedLogisticsLeg,
     BudgetStatus,
     MachineBase,
@@ -22,7 +23,8 @@ from machinery.models import (
     LogisticsLeg,
     LogisticsStage,
     Client,
-    PreTaxCharge
+    PreTaxCharge,
+    AdditionalCharge
 )
 
 from .repositories import BudgetRepository
@@ -312,7 +314,71 @@ class BudgetService:
         total_impuestos = _money(total_impuestos)
 
         costo_aduana = _money(subtotal_log_hasta + total_impuestos)
-        total = _money(base_imponible + total_impuestos + subtotal_log_post)
+
+        # -------------------------
+        # Additional charges (sobre subtotal_maquinas + subtotal_accesorios)
+        # NO afecta base imponible, solo total final.
+        # -------------------------
+        base_items = _money(subtotal_maquinas + subtotal_accesorios)
+
+        total_additional = D("0.00")
+        additional_charges: List[Dict[str, Any]] = payload.get("additional_charges") or []
+
+        if not additional_charges:
+            additional_charges = [
+                {
+                    "additional_charge_id": c.id,
+                    "incluido": True,
+                    "porcentaje": str(c.porcentaje),
+                    "monto_minimo": (str(c.monto_minimo) if c.monto_minimo is not None else None),
+                }
+                for c in AdditionalCharge.objects.filter(siempre_incluir=True).order_by("nombre")
+            ]
+
+        for ch in additional_charges:
+            c: AdditionalCharge = AdditionalCharge.objects.get(pk=ch["additional_charge_id"])
+            incluido = bool(ch.get("incluido", True))
+
+            porcentaje = _d(ch.get("porcentaje") or c.porcentaje)
+            monto_minimo = _d(ch.get("monto_minimo")) if ch.get("monto_minimo", None) is not None else (
+                _money(c.monto_minimo) if c.monto_minimo is not None else None
+            )
+
+            # persistimos override en catálogo (igual que impuestos)
+            if ch.get("porcentaje", None) is not None:
+                new_pct = _money(_d(ch.get("porcentaje")))
+                if _money(c.porcentaje) != new_pct:
+                    c.porcentaje = new_pct
+                    c.save(update_fields=["porcentaje"])
+
+            if ch.get("monto_minimo", None) is not None:
+                new_min = _money(_d(ch.get("monto_minimo")))
+                old_min = _money(c.monto_minimo) if c.monto_minimo is not None else None
+                if old_min is None or new_min != old_min:
+                    c.monto_minimo = new_min
+                    c.save(update_fields=["monto_minimo"])
+
+            monto_pct = _money(base_items * (porcentaje / D("100.00")))
+            monto_aplicado = monto_pct
+            if monto_minimo is not None:
+                monto_aplicado = _money(max(monto_pct, monto_minimo))
+
+            BudgetAdditionalChargeApplied.objects.create(
+                budget=budget,
+                additional_charge=c,
+                incluido=incluido,
+                porcentaje_snapshot=porcentaje,
+                monto_minimo_snapshot=monto_minimo,
+                monto_aplicado_snapshot=(monto_aplicado if incluido else D("0.00")),
+            )
+
+            if incluido:
+                total_additional += _money(monto_aplicado)
+
+        total_additional = _money(total_additional)
+
+
+        total = _money(base_imponible + total_impuestos + subtotal_log_post + total_additional)
 
         budget.subtotal_maquinas_snapshot = _money(subtotal_maquinas)
         budget.subtotal_accesorios_snapshot = _money(subtotal_accesorios)
@@ -323,6 +389,7 @@ class BudgetService:
         budget.base_imponible_snapshot = base_imponible
         budget.total_impuestos_snapshot = total_impuestos
         budget.costo_aduana_snapshot = costo_aduana
+        budget.total_additional_charges_snapshot = total_additional
         budget.total_snapshot = total
 
         budget.save(update_fields=[
@@ -334,6 +401,7 @@ class BudgetService:
             "total_pretax_charges_snapshot",
             "base_imponible_snapshot",
             "total_impuestos_snapshot",
+            "total_additional_charges_snapshot",
             "costo_aduana_snapshot",
             "total_snapshot",
             "updated_at",
@@ -400,6 +468,7 @@ class BudgetService:
         budget.logisticas.all().delete()
         budget.pretax_charges.all().delete()
         budget.impuestos.all().delete()
+        budget.additional_charges.all().delete()
 
         self._apply_payload_to_budget(budget=budget, payload=payload)
         return budget

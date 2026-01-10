@@ -5,7 +5,7 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 
 from .base import TimeStampedModel, USD_VALIDATOR
-from .catalog import MachineBase, Accessory, Tax, LogisticsLeg, Client, PreTaxCharge
+from .catalog import MachineBase, Accessory, Tax, LogisticsLeg, Client, PreTaxCharge, AdditionalCharge
 
 class BudgetStatus(models.TextChoices):
     DRAFT = "DRAFT", "Draft"
@@ -39,6 +39,9 @@ class Budget(TimeStampedModel):
         max_digits=14, decimal_places=2, validators=[USD_VALIDATOR], default=Decimal("0.00")
     )
     total_impuestos_snapshot = models.DecimalField(
+        max_digits=14, decimal_places=2, validators=[USD_VALIDATOR], default=Decimal("0.00")
+    )
+    total_additional_charges_snapshot = models.DecimalField(
         max_digits=14, decimal_places=2, validators=[USD_VALIDATOR], default=Decimal("0.00")
     )
     costo_aduana_snapshot = models.DecimalField(
@@ -185,6 +188,40 @@ class BudgetPreTaxChargeApplied(TimeStampedModel):
 
     def __str__(self) -> str:
         return f"{self.pre_tax_charge.nombre} ({'incluido' if self.incluido else 'no'})"
+
+class BudgetAdditionalChargeApplied(TimeStampedModel):
+    budget = models.ForeignKey(Budget, on_delete=models.CASCADE, related_name="additional_charges")
+    additional_charge = models.ForeignKey(
+        AdditionalCharge, on_delete=models.PROTECT, related_name="budget_additional_charges"
+    )
+    incluido = models.BooleanField(default=True)
+
+    porcentaje_snapshot = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.00")), MaxValueValidator(Decimal("100.00"))],
+        default=Decimal("0.00"),
+    )
+
+    monto_minimo_snapshot = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        validators=[USD_VALIDATOR],
+        null=True,
+        blank=True,
+    )
+
+    monto_aplicado_snapshot = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        validators=[USD_VALIDATOR],
+        default=Decimal("0.00"),
+    )
+
+    class Meta:
+        db_table = "budget_additional_charge_applied"
+        ordering = ["id"]
+
 
 class BudgetSelectedLogisticsLeg(TimeStampedModel):
     budget = models.ForeignKey(Budget, on_delete=models.CASCADE, related_name="logisticas")

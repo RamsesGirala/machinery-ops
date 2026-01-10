@@ -8,8 +8,9 @@ import { fetchLogisticsLegsAll } from '../../api/logisticsLegsApi'
 import { fetchTaxesAll } from '../../api/taxesApi'
 import { fetchClientsAll } from '../../api/clientsApi'
 import { fetchPreTaxChargesAll } from '../../api/preTaxChargesApi'
+import { fetchAdditionalChargesAll } from '../../api/additionalChargesApi'
 
-import type { MachineBase, Accessory, LogisticsLeg, Tax, Client, PreTaxCharge} from '../../api/types/models'
+import type { MachineBase, Accessory, LogisticsLeg, Tax, Client, PreTaxCharge, AdditionalCharge} from '../../api/types/models'
 import type { BudgetCreatePayload } from '../../api/types/payloads'
 import { formatUSD } from '../../utils/money'
 import ErrorAlert from '../../components/global/ErrorAlert'
@@ -24,6 +25,7 @@ type MachineLine = {
 
 type LogisticsSel = { logistics_leg_id: number; total: string; etapa: string }
 type TaxSel = { tax_id: number; incluido: boolean; porcentaje: string; nombre: string; monto_minimo?: string | null }
+type AdditionalChargeSel = { additional_charge_id: number; incluido: boolean; porcentaje: string; nombre: string ;monto_minimo?: string | null}
 
 function toNum(s: string): number {
   const n = Number(String(s ?? '').replace(',', '.'))
@@ -41,6 +43,7 @@ export default function BudgetCreatePage() {
   const [accessories, setAccessories] = useState<Accessory[]>([])
   const [legs, setLegs] = useState<LogisticsLeg[]>([])
   const [taxes, setTaxes] = useState<Tax[]>([])
+  const [additionalCharges, setAdditionalCharges] = useState<AdditionalCharge[]>([])
   const [clients, setClients] = useState<Client[]>([])
   const [pretaxCharges, setPreTaxCharges] = useState<PreTaxCharge[]>([])
 
@@ -70,6 +73,9 @@ export default function BudgetCreatePage() {
   // impuestos seleccionados (incluido + porcentaje override)
   const [taxSel, setTaxSel] = useState<Record<number, TaxSel>>({})
 
+  // cargos adicionales seleccionados (incluido + porcentaje/minimo override)
+  const [additionalSel, setAdditionalSel] = useState<Record<number, AdditionalChargeSel>>({})
+  
   // pickers buscables
   const [machinePickId, setMachinePickId] = useState<number | ''>('')
   const [accessoryPickByLine, setAccessoryPickByLine] = useState<Record<number, number | ''>>({})
@@ -84,11 +90,12 @@ export default function BudgetCreatePage() {
     ;(async () => {
       try {
         setError(null)
-        const [mAll, aAll, lAll, tAll, cAll, pAll] = await Promise.all([
+        const [mAll, aAll, lAll, tAll, acAll, cAll, pAll] = await Promise.all([
           fetchMachinesAll(),
           fetchAccessoriesAll(),
           fetchLogisticsLegsAll(),
           fetchTaxesAll(),
+          fetchAdditionalChargesAll(),
           fetchClientsAll(),
           fetchPreTaxChargesAll(),
         ])
@@ -97,6 +104,7 @@ export default function BudgetCreatePage() {
         setAccessories(aAll)
         setLegs(lAll)
         setTaxes(tAll)
+        setAdditionalCharges(acAll)
         setClients(cAll)
         setPreTaxCharges(pAll)
         
@@ -124,6 +132,20 @@ export default function BudgetCreatePage() {
           }
         }
         setTaxSel(init)
+
+        // Inicializamos additionalSel con todos: incluido si siempre_incluir, porcentaje y mínimo editable
+        const acInit: Record<number, AdditionalChargeSel> = {}
+        for (const c of acAll) {
+          acInit[c.id] = {
+            additional_charge_id: c.id,
+            incluido: c.siempre_incluir ? true : false,
+            porcentaje: c.porcentaje,
+            nombre: c.nombre,
+            monto_minimo: c.monto_minimo ?? null,
+          }
+        }
+        setAdditionalSel(acInit)
+
       } catch {
         setError('No se pudo cargar el catálogo necesario para crear/editar el presupuesto.')
       }
@@ -213,6 +235,24 @@ export default function BudgetCreatePage() {
           for (const k of Object.keys(merged)) merged[Number(k)] = { ...merged[Number(k)], incluido: false }
           // luego aplicamos lo del presupuesto
           for (const [k, v] of Object.entries(tsUpdate)) merged[Number(k)] = { ...(merged[Number(k)] ?? v), ...v }
+          return merged
+        })
+
+        // Cargos adicionales: solo los del presupuesto (y mantenemos el resto no incluido)
+        const acUpdate: Record<number, AdditionalChargeSel> = {}
+        for (const c of b?.additional_charges || []) {
+          const cid = Number(c.additional_charge ?? c.additional_charge_id)
+          const porcentaje = String(c.porcentaje_snapshot ?? c.porcentaje ?? '')
+          const incluido = true // el backend nos devuelve solo incluidos
+          const nombre = String(c.additional_charge_nombre ?? (additionalCharges.find((x) => x.id === cid)?.nombre ?? ''))
+          const monto_minimo = c.monto_minimo_snapshot ?? null
+          acUpdate[cid] = { additional_charge_id: cid, incluido, porcentaje, nombre, monto_minimo }
+        }
+
+        setAdditionalSel((prev) => {
+          const merged = { ...prev }
+          for (const k of Object.keys(merged)) merged[Number(k)] = { ...merged[Number(k)], incluido: false }
+          for (const [k, v] of Object.entries(acUpdate)) merged[Number(k)] = { ...(merged[Number(k)] ?? v), ...v }
           return merged
         })
         
@@ -315,10 +355,32 @@ export default function BudgetCreatePage() {
       impuestos += monto
     }
 
-    const total = baseImponible + impuestos + logPost
+    // Cargos adicionales: sobre (máquinas + accesorios) y se suma al total final (NO base imponible)
+    let additionalTotal = 0
+    const baseItems = subtotalMaquinas + subtotalAcc
 
-    return { subtotalMaquinas, subtotalAcc, logHasta, logPost, basePre, pretaxTotal, baseImponible, impuestos, total }
-  }, [items, logSel, pretaxSel,taxSel, taxes, machinePriceById, accessoryPriceById, machineById, accessoryById])
+    for (const c of Object.values(additionalSel)) {
+      if (!c.incluido) continue
+
+      const pct = toNum(c.porcentaje) / 100
+      const montoPct = baseItems * pct
+
+      const catalogMin = additionalCharges.find((x) => x.id === c.additional_charge_id)?.monto_minimo ?? null
+      let monto = montoPct
+
+      if (catalogMin !== null && catalogMin !== undefined) {
+        const minOverrideOrCatalog = c.monto_minimo ?? catalogMin
+        const minVal = toNum(String(minOverrideOrCatalog))
+        monto = Math.max(montoPct, minVal)
+      }
+
+      additionalTotal += monto
+    }
+
+    const total = baseImponible + impuestos + logPost + additionalTotal
+
+    return {subtotalMaquinas,subtotalAcc,logHasta,logPost,basePre,pretaxTotal,baseImponible,impuestos,additionalTotal,total}
+  }, [items, logSel, pretaxSel, taxSel, additionalSel, taxes, additionalCharges, machinePriceById, accessoryPriceById, machineById, accessoryById])
 
   function addMachineLine(machineId: number) {
     const m = machineById.get(machineId)
@@ -409,6 +471,19 @@ export default function BudgetCreatePage() {
               : {}),
           }
         }),
+        additional_charges: Object.values(additionalSel).map((c) => {
+          const catalogMin = additionalCharges.find((x) => x.id === c.additional_charge_id)?.monto_minimo ?? null
+
+          return {
+            additional_charge_id: c.additional_charge_id,
+            incluido: c.incluido,
+            porcentaje: c.porcentaje,
+            ...(catalogMin !== null && catalogMin !== undefined
+              ? { monto_minimo: (c.monto_minimo ?? catalogMin) }
+              : {}),
+          }
+        }),
+
       }
 
       if (isEdit && budgetId) {
@@ -862,6 +937,91 @@ export default function BudgetCreatePage() {
         </div>
       </div>
 
+      {/* Cargos adicionales */}
+      <div className="card mb-3">
+        <div className="card-body">
+          <div className="d-flex justify-content-between align-items-center">
+            <h5 className="mb-0">Cargos adicionales</h5>
+            <div className="text-muted small">
+              Base: {formatUSD(calc.subtotalMaquinas + calc.subtotalAcc)} · Total cargos: <b>{formatUSD(calc.additionalTotal)}</b>
+            </div>
+          </div>
+
+          <div className="text-muted small mb-2">
+            Se calculan sobre (máquinas + accesorios). Se aplica <b>MAX(% calculado, mínimo)</b>. No afectan base imponible.
+          </div>
+
+          {Object.values(additionalSel).length === 0 ? (
+            <div className="text-muted">Sin cargos adicionales cargados en catálogo.</div>
+          ) : (
+            <div className="table-responsive">
+              <table className="table table-sm align-middle mb-0">
+                <thead>
+                  <tr>
+                    <th>Incluir</th>
+                    <th>Nombre</th>
+                    <th style={{ width: 160 }}>%</th>
+                    <th style={{ width: 220 }}>Mínimo (opcional)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.values(additionalSel)
+                    .sort((a, b) => a.nombre.localeCompare(b.nombre))
+                    .map((c) => (
+                      <tr key={c.additional_charge_id}>
+                        <td>
+                          <input
+                            className="form-check-input"
+                            type="checkbox"
+                            checked={c.incluido}
+                            onChange={(e) =>
+                              setAdditionalSel((prev) => ({
+                                ...prev,
+                                [c.additional_charge_id]: { ...prev[c.additional_charge_id], incluido: e.target.checked },
+                              }))
+                            }
+                          />
+                        </td>
+                        <td>{c.nombre}</td>
+                        <td>
+                          <input
+                            className="form-control form-control-sm"
+                            value={c.porcentaje}
+                            onChange={(e) =>
+                              setAdditionalSel((prev) => ({
+                                ...prev,
+                                [c.additional_charge_id]: { ...prev[c.additional_charge_id], porcentaje: e.target.value },
+                              }))
+                            }
+                            disabled={!c.incluido}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            className="form-control form-control-sm"
+                            value={c.monto_minimo ?? ''}
+                            onChange={(e) =>
+                              setAdditionalSel((prev) => ({
+                                ...prev,
+                                [c.additional_charge_id]: {
+                                  ...prev[c.additional_charge_id],
+                                  monto_minimo: e.target.value.trim() ? e.target.value : null,
+                                },
+                              }))
+                            }
+                            placeholder="(opcional)"
+                            disabled={!c.incluido}
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Summary */}
       <div className="card mb-3">
         <div className="card-body">
@@ -900,6 +1060,12 @@ export default function BudgetCreatePage() {
               <div className="text-muted">Impuestos</div>
               <div className="fs-4">{formatUSD(calc.impuestos)}</div>
             </div>
+
+            <div className="col-md-2 mt-3">
+              <div className="text-muted">Cargos adicionales</div>
+              <div className="fs-4">{formatUSD(calc.additionalTotal)}</div>
+            </div>
+
             <div className="col-md-2 mt-3">
               <div className="text-muted">Total</div>
               <div className="fs-4">{formatUSD(calc.total)}</div>
