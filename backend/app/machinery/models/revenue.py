@@ -106,7 +106,7 @@ class RevenueEvent(TimeStampedModel):
 
 class RevenueEventUnit(TimeStampedModel):
     revenue_event = models.ForeignKey(RevenueEvent, on_delete=models.CASCADE, related_name="unidades")
-    purchased_unit = models.ForeignKey(PurchasedUnit, on_delete=models.PROTECT, related_name="revenue_usos")
+    purchased_unit = models.ForeignKey(PurchasedUnit, on_delete=models.CASCADE, related_name="revenue_usos")
 
     class Meta:
         db_table = "revenue_event_unit"

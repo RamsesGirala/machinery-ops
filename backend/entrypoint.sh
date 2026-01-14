@@ -26,5 +26,25 @@ fi
 echo ">> Ejecutando migrate..."
 python manage.py migrate --noinput
 
+echo ">> Asegurando superusuario (modo dev)..."
+python manage.py shell -c "
+from django.contrib.auth import get_user_model
+User = get_user_model()
+
+USERNAME = 'quintero'
+EMAIL = 'quintero@rivercampeon.com'
+PASSWORD = 'quintero'
+
+if not User.objects.filter(username=USERNAME).exists():
+    User.objects.create_superuser(
+        username=USERNAME,
+        email=EMAIL,
+        password=PASSWORD
+    )
+    print('>> Superusuario creado: quintero / quintero')
+else:
+    print('>> Superusuario ya existe')
+"
+
 echo ">> Iniciando servidor..."
 exec python manage.py runserver 0.0.0.0:8000

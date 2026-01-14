@@ -8,7 +8,7 @@ from .catalog import MachineBase
 
 
 class Purchase(TimeStampedModel):
-    budget = models.OneToOneField(Budget, on_delete=models.PROTECT, related_name="compra")
+    budget = models.OneToOneField(Budget, on_delete=models.CASCADE, related_name="compra")
     fecha_compra = models.DateField()
     total_snapshot = models.DecimalField(max_digits=14, decimal_places=2, validators=[USD_VALIDATOR])
 
