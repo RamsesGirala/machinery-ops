@@ -235,7 +235,7 @@ export default function BudgetsListPage() {
               <tr>
                 <th>Número</th>
                 <th>Cliente</th>
-                <th>Maquinas</th>
+                <th>Items</th>
                 <th>Fecha</th>
                 <th>Total</th>
                 <th>Estado</th>

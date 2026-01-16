@@ -65,7 +65,7 @@ services:
       BACKUP_PREFIX: "machinery-ops"
     # Montamos la carpeta de Drive Desktop (en WSL es /mnt/c/...)
     volumes:
-      - /mnt/c/Users/ramse/GoogleDrive/machinery-ops/backups:/backups
+      - ${BACKUP_DIR:-./backups}:/backups
     restart: "no"
     command: >
       sh -lc '

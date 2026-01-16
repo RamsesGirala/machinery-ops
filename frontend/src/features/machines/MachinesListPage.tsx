@@ -92,7 +92,7 @@ const MachinesListPage: React.FC = () => {
     try {
       await eliminarMachine(id)
       navigate(from, {
-        state: { flash: { type: 'success', message: 'Maquina Base eliminada.' } }
+        state: { flash: { type: 'success', message: 'Item Base eliminada.' } }
       })
       await load()
     } catch (e: any) {
@@ -106,7 +106,7 @@ const MachinesListPage: React.FC = () => {
     <div>
       <div className="d-flex justify-content-between align-items-start mb-3">
         <div>
-          <h2 className="mb-1">Maquinas Base</h2>
+          <h2 className="mb-1">Items Base</h2>
         </div>
         <div className="d-flex gap-2 align-items-center">
           <input

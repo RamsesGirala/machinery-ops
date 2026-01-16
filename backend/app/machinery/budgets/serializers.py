@@ -27,6 +27,12 @@ class BudgetPreTaxChargeInSerializer(serializers.Serializer):
     pre_tax_charge_id = serializers.IntegerField()
     incluido = serializers.BooleanField(required=False, default=True)
     porcentaje = serializers.DecimalField(max_digits=6, decimal_places=2, required=False)
+    # índices 0-based del array payload.items
+    # si no viene o viene vacío => aplica a todos
+    apply_to_item_indexes = serializers.ListField(
+        child=serializers.IntegerField(min_value=0),
+        required=False
+    )
 
 class BudgetTaxInSerializer(serializers.Serializer):
     tax_id = serializers.IntegerField()
@@ -96,7 +102,7 @@ class BudgetPreTaxChargeOutSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = BudgetPreTaxChargeApplied
-        fields = ["id", "pre_tax_charge", "pre_tax_charge_nombre", "porcentaje_snapshot", "monto_aplicado_snapshot"]
+        fields = ["id", "pre_tax_charge", "pre_tax_charge_nombre", "porcentaje_snapshot", "monto_aplicado_snapshot","applied_to_budget_item_ids"]
 
 class BudgetTaxOutSerializer(serializers.ModelSerializer):
     tax_nombre = serializers.CharField(source="tax.nombre", read_only=True)

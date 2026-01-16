@@ -110,10 +110,10 @@ export default function UnitsListPage() {
               </select>
             </div>
             <div className="col-12 col-md-3">
-              <label className="form-label small text-muted mb-1">Máquina</label>
+              <label className="form-label small text-muted mb-1">Item</label>
               <input
                 className="form-control"
-                placeholder="Nombre de máquina..."
+                placeholder="Nombre del item..."
                 value={machineNombre}
                 onChange={(e) => {
                   setPage(1)
@@ -171,7 +171,7 @@ export default function UnitsListPage() {
           <table className="table align-middle">
             <thead>
               <tr>
-                <th>Máquina</th>
+                <th>Item</th>
                 <th>Estado</th>
                 <th>Fecha compra</th>
                 <th>Presupuesto</th>

@@ -17,7 +17,7 @@ const MachineFormPage: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const title = useMemo(() => (isEdit ? 'Editar Maquina Base' : 'Nueva Maquina Base'), [isEdit])
+  const title = useMemo(() => (isEdit ? 'Editar Item Base' : 'Nuevo Item Base'), [isEdit])
 
   useEffect(() => {
     const load = async () => {
@@ -29,7 +29,7 @@ const MachineFormPage: React.FC = () => {
         setNombre(data.nombre)
         setTotal(data.total)
       } catch (e: any) {
-        setError(drfErrorToMessage(e, 'No se pudo cargar la maquina base.'))
+        setError(drfErrorToMessage(e, 'No se pudo cargar el item base.'))
       } finally {
         setLoading(false)
       }
@@ -46,11 +46,11 @@ const MachineFormPage: React.FC = () => {
       if (isEdit) {
         const payload: MachineUpdatePayload = { nombre, total }
         await editarMachine(Number(id), payload)
-        navigate(from ?? '/machines', { state: { flash: { type: 'success', message: 'Maquina Base actualizada.' } } })
+        navigate(from ?? '/machines', { state: { flash: { type: 'success', message: 'Item Base actualizado.' } } })
       } else {
         const payload: MachineCreatePayload = { nombre, total }
         await crearMachine(payload)
-        navigate(from ?? '/machines', { state: { flash: { type: 'success', message: 'Maquina Base creada.' } } })
+        navigate(from ?? '/machines', { state: { flash: { type: 'success', message: 'Item Base creado.' } } })
       }
     } catch (e: any) {
       setError(e.response.data.error.message)

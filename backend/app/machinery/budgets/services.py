@@ -150,6 +150,12 @@ class BudgetService:
         subtotal_maquinas = D("0.00")
         subtotal_accesorios = D("0.00")
 
+        # Para poder aplicar pretax por subconjunto de items:
+        # - created_item_ids_in_order mantiene el orden del payload.items
+        # - item_total_by_id guarda base de cada item (maquina*cantidad + accesorios)
+        created_item_ids_in_order: List[int] = []
+        item_total_by_id: Dict[int, Decimal] = {}
+
         items: List[Dict[str, Any]] = payload.get("items") or []
         if not items:
             raise ValueError("Debe incluir al menos 1 máquina en el presupuesto.")
@@ -172,6 +178,9 @@ class BudgetService:
             )
             subtotal_maquinas += item.subtotal_maquina_snapshot
 
+            created_item_ids_in_order.append(item.id)
+            item_total_by_id[item.id] = item.subtotal_maquina_snapshot
+
             accesorios: List[Dict[str, Any]] = it.get("accesorios") or []
             for acc in accesorios:
                 a: Accessory = Accessory.objects.get(pk=acc["accessory_id"])
@@ -190,6 +199,8 @@ class BudgetService:
                     subtotal_snapshot=_money(acc_total * acc_qty),
                 )
                 subtotal_accesorios += bia.subtotal_snapshot
+
+                item_total_by_id[item.id] = _money(item_total_by_id[item.id] + bia.subtotal_snapshot)
 
         subtotal_log_hasta = D("0.00")
         subtotal_log_post = D("0.00")
@@ -239,7 +250,26 @@ class BudgetService:
                 p.porcentaje = porc2
                 p.save(update_fields=["porcentaje"])
 
-            monto_pct = _money(base_pre_impuestos * (porcentaje / D("100.00")))
+            apply_idx = ptx.get("apply_to_item_indexes") or []
+            budget_item_ids: List[int] = []
+
+            if apply_idx:
+                for i in apply_idx:
+                    if i < 0 or i >= len(created_item_ids_in_order):
+                        raise DomainError(
+                            error=ErrorCodes.BAD_REQUEST,
+                            details={"message": "Índice de item fuera de rango en pretax_charges", "index": i},
+                        )
+                    budget_item_ids.append(created_item_ids_in_order[i])
+
+                base_items = _money(sum((item_total_by_id[iid] for iid in budget_item_ids), D("0.00")))
+                base_for_charge = _money(base_items + subtotal_log_hasta)
+            else:
+                # default: como hoy (aplica a todos)
+                base_for_charge = base_pre_impuestos
+                budget_item_ids = []
+
+            monto_pct = _money(base_for_charge * (porcentaje / D("100.00")))
             monto_aplicado = monto_pct
 
             BudgetPreTaxChargeApplied.objects.create(
@@ -248,6 +278,7 @@ class BudgetService:
                 incluido=incluido,
                 porcentaje_snapshot=porcentaje,
                 monto_aplicado_snapshot=(monto_aplicado if incluido else D("0.00")),
+                applied_to_budget_item_ids=budget_item_ids,
             )
 
             if incluido:

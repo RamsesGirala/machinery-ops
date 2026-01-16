@@ -128,6 +128,7 @@ export interface BudgetPreTaxChargeOut {
   pre_tax_charge_nombre: string
   porcentaje_snapshot: string
   monto_aplicado_snapshot: string
+  applied_to_budget_item_ids?: number[]
 }
 
 export interface BudgetAdditionalChargeOut {

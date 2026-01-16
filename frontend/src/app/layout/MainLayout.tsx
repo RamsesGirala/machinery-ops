@@ -55,7 +55,7 @@ const MainLayout: React.FC = () => {
           </NavLink>
 
           <NavLink to="/machines" className={linkClass}>
-            Maquinaria
+            Items
           </NavLink>
 
           <div className="mt-3 mb-1 text-muted small">Operaciones</div>

@@ -83,7 +83,7 @@ export default function UnitDetailPage() {
               </div>
 
               <div className="col-12 col-md-3">
-                <div className="text-muted small">Máquina</div>
+                <div className="text-muted small">Item</div>
                 <div className="fw-semibold">{data.machine_nombre}</div>
               </div>
 

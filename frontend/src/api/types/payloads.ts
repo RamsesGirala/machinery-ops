@@ -75,6 +75,7 @@ export type BudgetPreTaxChargeIn = {
   pre_tax_charge_id: number
   incluido: boolean
   porcentaje: string
+  apply_to_item_indexes?: number[]
 }
 
 export type BudgetAdditionalChargeIn = {

@@ -175,6 +175,10 @@ class BudgetPreTaxChargeApplied(TimeStampedModel):
         default=Decimal("0.00"),
     )
 
+    # Lista de BudgetItem IDs a los que aplica esta carga.
+    # [] => aplica a TODOS los items (default / backwards compatible)
+    applied_to_budget_item_ids = models.JSONField(default=list, blank=True)
+
     class Meta:
         db_table = "budget_pre_tax_charge_applied"
         ordering = ["id"]

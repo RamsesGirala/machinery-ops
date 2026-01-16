@@ -92,8 +92,8 @@ const HomePage: React.FC = () => {
         },
         {
           icon: '🚜',
-          title: 'Maquinaria',
-          description: 'Tipos de máquinas para presupuestar y comprar.',
+          title: 'Items',
+          description: 'Tipos de items(maquinas,casas,etc) para presupuestar y comprar.',
           actions: [
             { label: 'Ver', to: '/machines', variant: 'soft' },
             { label: 'Nueva', to: '/machines/nuevo', variant: 'primary' }
@@ -102,7 +102,7 @@ const HomePage: React.FC = () => {
         {
           icon: '🧩',
           title: 'Accesorios',
-          description: 'Accesorios y consumibles asociados a maquinaria.',
+          description: 'Accesorios y consumibles asociados a los items.',
           actions: [
             { label: 'Ver', to: '/accessories', variant: 'soft' },
             { label: 'Nuevo', to: '/accessories/nuevo', variant: 'primary' }

@@ -26,6 +26,7 @@ type MachineLine = {
 type LogisticsSel = { logistics_leg_id: number; total: string; etapa: string }
 type TaxSel = { tax_id: number; incluido: boolean; porcentaje: string; nombre: string; monto_minimo?: string | null }
 type AdditionalChargeSel = { additional_charge_id: number; incluido: boolean; porcentaje: string; nombre: string ;monto_minimo?: string | null}
+type PreTaxSel = { pre_tax_charge_id: number; incluido: boolean; porcentaje: string; nombre: string; apply_to_item_indexes?: number[]}
 
 function toNum(s: string): number {
   const n = Number(String(s ?? '').replace(',', '.'))
@@ -50,7 +51,7 @@ export default function BudgetCreatePage() {
   const [clienteId, setClienteId] = useState<number | null>(null)
   const [numero, setNumero] = useState<string>('')
 
-  type PreTaxSel = { pre_tax_charge_id: number; incluido: boolean; porcentaje: string; nombre: string }
+  
   const [pretaxSel, setPretaxSel] = useState<Record<number, PreTaxSel>>({})
 
 
@@ -257,12 +258,33 @@ export default function BudgetCreatePage() {
         })
         
         const psUpdate: Record<number, PreTaxSel> = {}
+
+        // Mapeo item_id -> index según el orden que vino el budget detail (mismo orden que usamos para setItems)
+        const itemIdToIndex = new Map<number, number>()
+        ;(b?.items || []).forEach((it: any, idx: number) => {
+          const iid = Number(it.id)
+          if (!Number.isNaN(iid)) itemIdToIndex.set(iid, idx)
+        })
+
         for (const p of b?.pretax_charges || []) {
           const pid = Number(p.pre_tax_charge ?? p.pre_tax_charge_id)
           const porcentaje = String(p.porcentaje_snapshot ?? p.porcentaje ?? '')
           const incluido = Boolean(p.incluido ?? true)
           const nombre = String(p.nombre ?? (pretaxCharges.find((x) => x.id === pid)?.nombre ?? ''))
-          psUpdate[pid] = { pre_tax_charge_id: pid, incluido, porcentaje, nombre }
+
+          const appliedIds: number[] = Array.isArray(p.applied_to_budget_item_ids) ? p.applied_to_budget_item_ids : []
+          const idxs = appliedIds
+            .map((id: number) => itemIdToIndex.get(Number(id)))
+            .filter((x: any) => x !== undefined) as number[]
+
+          // Si viene [] => “todos” => lo dejamos undefined para que la UI lo interprete como “Todos”
+          psUpdate[pid] = {
+            pre_tax_charge_id: pid,
+            incluido,
+            porcentaje,
+            nombre,
+            apply_to_item_indexes: idxs.length > 0 ? idxs : undefined,
+          }
         }
 
         setPretaxSel((prev) => {
@@ -327,11 +349,29 @@ export default function BudgetCreatePage() {
 
     const basePre = subtotalMaquinas + subtotalAcc + logHasta
 
+    // base por item: (maquina*cantidad + accesorios)
+    const itemBases = items.map((it) => {
+      const mUnit = toNum(machinePriceById[it.machine_base_id] ?? machineById.get(it.machine_base_id)?.total ?? '0')
+      const mSubtotal = mUnit * it.cantidad
+      const accSubtotal = it.accesorios.reduce((a2, a) => {
+        const unit = toNum(accessoryPriceById[a.accessory_id] ?? accessoryById.get(a.accessory_id)?.total ?? '0')
+        return a2 + unit * a.cantidad
+      }, 0)
+      return mSubtotal + accSubtotal
+    })
+
     let pretaxTotal = 0
     for (const p of Object.values(pretaxSel)) {
       if (!p.incluido) continue
+
+      const idxs = p.apply_to_item_indexes
+      const baseForCharge =
+        idxs && idxs.length > 0
+          ? (idxs.reduce((acc, i) => acc + (itemBases[i] ?? 0), 0) + logHasta)
+          : basePre
+
       const pct = toNum(p.porcentaje) / 100
-      pretaxTotal += basePre * pct
+      pretaxTotal += baseForCharge * pct
     }
 
     const baseImponible = basePre + pretaxTotal
@@ -430,7 +470,7 @@ export default function BudgetCreatePage() {
   async function onSave() {
     setError(null)
     if (items.length === 0) {
-      setError('Tenés que agregar al menos 1 máquina.')
+      setError('Tenés que agregar al menos 1 item.')
       return
     }
 
@@ -458,6 +498,9 @@ export default function BudgetCreatePage() {
           pre_tax_charge_id: p.pre_tax_charge_id,
           incluido: p.incluido,
           porcentaje: p.porcentaje,
+          ...(p.apply_to_item_indexes && p.apply_to_item_indexes.length > 0
+            ? { apply_to_item_indexes: p.apply_to_item_indexes }
+            : {}),
         })),
         impuestos: Object.values(taxSel).map((t) => {
           const catalogMin = taxes.find((x) => x.id === t.tax_id)?.monto_minimo ?? null
@@ -553,13 +596,13 @@ export default function BudgetCreatePage() {
       <div className="card mb-3">
         <div className="card-body">
           <div className="d-flex justify-content-between align-items-center mb-2">
-            <h5 className="mb-0">Máquinas</h5>
+            <h5 className="mb-0">Items</h5>
             <div className="d-flex gap-2 align-items-start" style={{ minWidth: 520 }}>
               <div className="flex-grow-1" style={{ minWidth: 420 }}>
                 <SearchSelect
                   value={machinePickId}
-                  placeholder="Buscar máquina..."
-                  emptyLabel="Agregar máquina..."
+                  placeholder="Buscar item..."
+                  emptyLabel="Agregar item..."
                   options={machines.map((m) => ({ value: m.id, label: `${m.nombre} (${formatUSD(m.total)})` }))}
                   onChange={(v) => setMachinePickId(v ? Number(v) : '')}
                 />
@@ -580,7 +623,7 @@ export default function BudgetCreatePage() {
           </div>
 
           {items.length === 0 ? (
-            <div className="text-muted">Sin máquinas todavía.</div>
+            <div className="text-muted">Sin items todavía.</div>
           ) : (
             items.map((it, idx) => {
               const m = machineById.get(it.machine_base_id)
@@ -628,7 +671,7 @@ export default function BudgetCreatePage() {
                         className="btn btn-sm btn-outline-danger"
                         onClick={() => setItems((prev) => prev.filter((_, i) => i !== idx))}
                       >
-                        Quitar máquina
+                        Quitar item
                       </button>
                     </div>
                   </div>
@@ -806,7 +849,7 @@ export default function BudgetCreatePage() {
       <div className="card mb-3">
         <div className="card-body">
           <h5>Costos pre-impuestos</h5>
-          <div className="text-muted small mb-2">Se calculan sobre (máquinas + accesorios + logística HASTA_ADUANA) y se suman a la base imponible.</div>
+          <div className="text-muted small mb-2">Se calculan sobre (items + accesorios + logística HASTA_ADUANA) y se suman a la base imponible.</div>
 
           {pretaxCharges.length === 0 ? (
             <div className="text-muted">Sin costos pre-impuestos cargados.</div>
@@ -818,6 +861,7 @@ export default function BudgetCreatePage() {
                     <th>Incluir</th>
                     <th>Nombre</th>
                     <th style={{ width: 180 }}>%</th>
+                    <th style={{ width: 260 }}>Aplica a</th>
                     <th style={{ width: 220 }}>Aplicado (U$D)</th>
                   </tr>
                 </thead>
@@ -825,7 +869,24 @@ export default function BudgetCreatePage() {
                   {pretaxCharges.map((p) => {
                     const sel = pretaxSel[p.id]
                     const included = sel?.incluido ?? false
-                    const base = calc.basePre
+
+                    // base por item: (maquina*cantidad + accesorios)
+                    const itemBases = items.map((it) => {
+                      const mUnit = toNum(machinePriceById[it.machine_base_id] ?? machineById.get(it.machine_base_id)?.total ?? '0')
+                      const mSubtotal = mUnit * it.cantidad
+                      const accSubtotal = (it.accesorios || []).reduce((a2, a) => {
+                        const aUnit = toNum(accessoryPriceById[a.accessory_id] ?? accessoryById.get(a.accessory_id)?.total ?? '0')
+                        return a2 + aUnit * a.cantidad
+                      }, 0)
+                      return mSubtotal + accSubtotal
+                    })
+
+                    const idxs = sel?.apply_to_item_indexes
+                    const base =
+                      idxs && idxs.length > 0
+                        ? (idxs.reduce((acc, i) => acc + (itemBases[i] ?? 0), 0) + calc.logHasta)
+                        : calc.basePre
+
                     const pct = toNum(sel?.porcentaje ?? p.porcentaje) / 100
                     const aplicado = base * pct
 
@@ -846,6 +907,60 @@ export default function BudgetCreatePage() {
                             onChange={(e) => setPretaxSel((prev) => ({ ...prev, [p.id]: { ...prev[p.id], porcentaje: e.target.value } }))}
                           />
                           <div className="form-text">Sugerido: {p.porcentaje}%</div>
+                        </td>
+                        <td>
+                          <div className="d-flex flex-column gap-1">
+                            <select
+                              className="form-select form-select-sm"
+                              value={sel?.apply_to_item_indexes && sel.apply_to_item_indexes.length > 0 ? 'SOME' : 'ALL'}
+                              onChange={(e) => {
+                                const mode = e.target.value
+                                setPretaxSel((prev) => ({
+                                  ...prev,
+                                  [p.id]: {
+                                    ...prev[p.id],
+                                    apply_to_item_indexes: mode === 'SOME' ? [] : undefined,
+                                  },
+                                }))
+                              }}
+                              disabled={!included}
+                            >
+                              <option value="ALL">Todos los ítems</option>
+                              <option value="SOME">Seleccionar ítems…</option>
+                            </select>
+
+                            {included && sel?.apply_to_item_indexes ? (
+                              <div className="border rounded p-2" style={{ maxHeight: 120, overflow: 'auto' }}>
+                                {items.map((it, idx) => {
+                                  const mbName = machineById.get(it.machine_base_id)?.nombre ?? `Item ${it.machine_base_id}`
+                                  const checked = sel.apply_to_item_indexes?.includes(idx) ?? false
+
+                                  return (
+                                    <label key={idx} className="d-flex align-items-center gap-2 small mb-1">
+                                      <input
+                                        type="checkbox"
+                                        checked={checked}
+                                        onChange={(ev) => {
+                                          const on = ev.target.checked
+                                          setPretaxSel((prev) => {
+                                            const cur = prev[p.id]?.apply_to_item_indexes ?? []
+                                            const next = on ? Array.from(new Set([...cur, idx])) : cur.filter((x) => x !== idx)
+                                            return { ...prev, [p.id]: { ...prev[p.id], apply_to_item_indexes: next } }
+                                          })
+                                        }}
+                                      />
+                                      <span>
+                                        #{idx + 1} {mbName} (x{it.cantidad})
+                                      </span>
+                                    </label>
+                                  )
+                                })}
+                                {sel.apply_to_item_indexes.length === 0 ? (
+                                  <div className="text-muted small">Elegí al menos 1 ítem o volvé a “Todos”.</div>
+                                ) : null}
+                              </div>
+                            ) : null}
+                          </div>
                         </td>
                         <td>
                           <div className="fw-semibold">{included ? formatUSD(aplicado) : <span className="text-muted">—</span>}</div>
@@ -948,7 +1063,7 @@ export default function BudgetCreatePage() {
           </div>
 
           <div className="text-muted small mb-2">
-            Se calculan sobre (máquinas + accesorios). Se aplica <b>MAX(% calculado, mínimo)</b>. No afectan base imponible.
+            Se calculan sobre (items + accesorios). Se aplica <b>MAX(% calculado, mínimo)</b>. No afectan base imponible.
           </div>
 
           {Object.values(additionalSel).length === 0 ? (
@@ -1028,7 +1143,7 @@ export default function BudgetCreatePage() {
           <h5>Resumen</h5>
           <div className="row g-2">
             <div className="col-md-3">
-              <div className="text-muted">Subtotal máquinas</div>
+              <div className="text-muted">Subtotal items</div>
               <div className="fs-5">{formatUSD(calc.subtotalMaquinas)}</div>
             </div>
             <div className="col-md-3">
